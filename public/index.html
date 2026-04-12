@@ -39,7 +39,8 @@
   <div class="grid" id="grid">
     <div class="empty"><p>Scanne ton premier ticket !</p></div>
   </div>
-  <script>
+  <script>const user = JSON.parse(localStorage.getItem('user'));
+if (!user) window.location.href = '/login';
     const params = new URLSearchParams(window.location.search);
     const film = params.get('film');
     const cinema = params.get('cinema');
