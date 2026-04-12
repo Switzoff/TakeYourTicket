@@ -9,6 +9,17 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+
+async function verifierToken(req) {
+  const token = req.headers.authorization?.split('Bearer ')[1];
+  if (!token) return null;
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    return decoded.uid;
+  } catch {
+    return null;
+  }
+}
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
@@ -35,12 +46,23 @@ app.post('/api/generer-tickets', async (req, res) => {
 
 app.get('/scan/:id', async (req, res) => {
   const { id } = req.params;
+  const uid = req.query.uid;
   const doc = await db.collection('tickets').doc(id).get();
   if (!doc.exists) return res.send('<h1>Ticket invalide</h1>');
   const ticket = doc.data();
   if (ticket.scanne) return res.send('<h1>Ce ticket a déjà été scanné</h1>');
   await db.collection('tickets').doc(id).update({ scanne: true });
-  res.redirect(`/collection?film=${ticket.film}&cinema=${ticket.cinema}&date=${ticket.date}`);
+  if (uid) {
+    await db.collection('collections').add({
+      uid,
+      film: ticket.film,
+      cinema: ticket.cinema,
+      date: ticket.date,
+      ticketId: id,
+      createdAt: new Date()
+    });
+  }
+  res.redirect(`/collection?film=${ticket.film}&cinema=${ticket.cinema}&date=${ticket.date}&ticketId=${id}`);
 });
 
 app.get('/api/tickets', async (req, res) => {

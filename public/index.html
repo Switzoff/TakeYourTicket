@@ -39,36 +39,74 @@
   <div class="grid" id="grid">
     <div class="empty"><p>Scanne ton premier ticket !</p></div>
   </div>
-  <script>const user = JSON.parse(localStorage.getItem('user'));
-if (!user) window.location.href = '/login';
-    const params = new URLSearchParams(window.location.search);
-    const film = params.get('film');
-    const cinema = params.get('cinema');
-    const date = params.get('date');
+  <script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { getFirestore, collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-    let tickets = JSON.parse(localStorage.getItem('tickets') || '[]');
+  const firebaseConfig = {
+    apiKey: "AIzaSyAgel7LUkMikP4aXI1NFJPyHRJjHmRiEo4",
+    authDomain: "takeyourticket-c82fc.firebaseapp.com",
+    projectId: "takeyourticket-c82fc"
+  };
 
-    if (film) {
-      tickets.push({ film, cinema, date });
-      localStorage.setItem('tickets', JSON.stringify(tickets));
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const params = new URLSearchParams(window.location.search);
+  const film = params.get('film');
+  const cinema = params.get('cinema');
+  const date = params.get('date');
+  const ticketId = params.get('ticketId');
+
+  const grid = document.getElementById('grid');
+  const total = document.getElementById('total');
+  const mois = document.getElementById('mois');
+
+  const userStored = JSON.parse(localStorage.getItem('user'));
+  if (!userStored) {
+    window.location.href = '/login';
+  } else {
+    charger(userStored.uid);
+  }
+
+  async function charger(uid) {
+    if (film && ticketId) {
+      try {
+        await addDoc(collection(db, 'collections'), {
+          uid,
+          film,
+          cinema,
+          date,
+          ticketId,
+          createdAt: new Date()
+        });
+      } catch(e) {
+        console.error('Erreur ajout ticket:', e);
+      }
       window.history.replaceState({}, '', '/collection');
     }
 
-    const grid = document.getElementById('grid');
-    const total = document.getElementById('total');
-    const mois = document.getElementById('mois');
+    try {
+      const q = query(collection(db, 'collections'), where('uid', '==', uid));
+      const snapshot = await getDocs(q);
+      const tickets = snapshot.docs.map(d => d.data());
 
-    total.textContent = tickets.length;
+      total.textContent = tickets.length;
 
-    const maintenant = new Date();
-    const ceMois = tickets.filter(t => {
-      const d = new Date(t.date);
-      return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear();
-    }).length;
-    mois.textContent = ceMois;
+      const maintenant = new Date();
+      const ceMois = tickets.filter(t => {
+        const d = new Date(t.date);
+        return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear();
+      }).length;
+      mois.textContent = ceMois;
 
-    async function chargerAffiches() {
-      if (tickets.length === 0) return;
+      if (tickets.length === 0) {
+        grid.innerHTML = '<div class="empty"><p>Scanne ton premier ticket !</p></div>';
+        return;
+      }
+
       grid.innerHTML = '';
       for (const t of [...tickets].reverse()) {
         const res = await fetch(`/api/affiche/${encodeURIComponent(t.film)}`);
@@ -85,8 +123,10 @@ if (!user) window.location.href = '/login';
             </div>
           </div>`;
       }
+    } catch(e) {
+      console.error('Erreur chargement:', e);
     }
-    chargerAffiches();
-  </script>
+  }
+</script>
 </body>
 </html>
