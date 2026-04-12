@@ -64,7 +64,9 @@ app.get('/api/affiche/:film', async (req, res) => {
     res.json({ affiche: null });
   }
 });
-
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
 app.listen(PORT, () => {
   console.log(`TakeYourTicket tourne sur http://localhost:${PORT}`);
 });
