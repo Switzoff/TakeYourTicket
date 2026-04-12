@@ -40,30 +40,6 @@
     <div class="empty"><p>Scanne ton premier ticket !</p></div>
   </div>
   <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged, signInWithCredential, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyAgel7LUkMikP4aXI1NFJPyHRJjHmRiEo4",
-    authDomain: "takeyourticket-c82fc.firebaseapp.com",
-    projectId: "takeyourticket-c82fc"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  const params = new URLSearchParams(window.location.search);
-  const film = params.get('film');
-  const cinema = params.get('cinema');
-  const date = params.get('date');
-  const ticketId = params.get('ticketId');
-
-  const grid = document.getElementById('grid');
-  const total = document.getElementById('total');
-  const mois = document.getElementById('mois');
-
   const userStored = JSON.parse(localStorage.getItem('user'));
   if (!userStored) {
     window.location.href = '/login';
@@ -72,26 +48,13 @@
   }
 
   async function charger(uid) {
-    if (film && ticketId) {
-      try {
-        await addDoc(collection(db, 'collections'), {
-          uid,
-          film,
-          cinema,
-          date,
-          ticketId,
-          createdAt: new Date()
-        });
-      } catch(e) {
-        console.error('Erreur ajout ticket:', e);
-      }
-      window.history.replaceState({}, '', '/collection');
-    }
+    const grid = document.getElementById('grid');
+    const total = document.getElementById('total');
+    const mois = document.getElementById('mois');
 
     try {
-      const q = query(collection(db, 'collections'), where('uid', '==', uid));
-      const snapshot = await getDocs(q);
-      const tickets = snapshot.docs.map(d => d.data());
+      const res = await fetch(`/api/collections?uid=${uid}`);
+      const tickets = await res.json();
 
       total.textContent = tickets.length;
 
@@ -109,8 +72,8 @@
 
       grid.innerHTML = '';
       for (const t of [...tickets].reverse()) {
-        const res = await fetch(`/api/affiche/${encodeURIComponent(t.film)}`);
-        const data = await res.json();
+        const r = await fetch(`/api/affiche/${encodeURIComponent(t.film)}`);
+        const data = await r.json();
         const img = data.affiche
           ? `<img src="${data.affiche}" style="width:100%;height:80px;object-fit:cover;">`
           : `<div class="ticket-thumb">🎬</div>`;
@@ -124,7 +87,7 @@
           </div>`;
       }
     } catch(e) {
-      console.error('Erreur chargement:', e);
+      console.error('Erreur:', e);
     }
   }
 </script>

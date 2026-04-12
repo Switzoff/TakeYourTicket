@@ -89,6 +89,14 @@ app.get('/api/affiche/:film', async (req, res) => {
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
+app.get('/api/collections', async (req, res) => {
+  const { uid } = req.query;
+  if (!uid) return res.json([]);
+  const snapshot = await db.collection('collections').where('uid', '==', uid).get();
+  const tickets = snapshot.docs.map(doc => doc.data());
+  res.json(tickets);
+});
+
 app.listen(PORT, () => {
   console.log(`TakeYourTicket tourne sur http://localhost:${PORT}`);
 });
