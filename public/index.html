@@ -30,6 +30,7 @@
   <div class="header">
     <h1>TakeYourTicket</h1>
     <p>Ma collection</p>
+    <button onclick="seDeconnecter()" style="margin-top:8px;background:transparent;border:0.5px solid #333;color:#555;padding:6px 12px;border-radius:8px;font-size:11px;cursor:pointer;">Déconnexion</button>
   </div>
   <div class="stats">
     <div class="stat"><div class="val" id="total">0</div><div class="lbl">Films vus</div></div>
@@ -39,7 +40,11 @@
   <div class="grid" id="grid">
     <div class="empty"><p>Scanne ton premier ticket !</p></div>
   </div>
-  <script type="module">
+<script>    
+  function seDeconnecter() {
+  localStorage.clear();
+  window.location.href = '/login';
+}
   const userStored = JSON.parse(localStorage.getItem('user'));
   if (!userStored) {
     window.location.href = '/login';
