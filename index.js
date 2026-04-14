@@ -97,6 +97,10 @@ app.get('/api/collections', async (req, res) => {
   res.json(tickets);
 });
 
+app.get('/scan-page/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'scan.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`TakeYourTicket tourne sur http://localhost:${PORT}`);
 });

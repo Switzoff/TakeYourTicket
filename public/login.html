@@ -63,8 +63,13 @@
         const token = await user.getIdToken();
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify({ uid: user.uid, name: user.displayName, email: user.email, photo: user.photoURL }));
-        window.location.href = '/collection';
-      } catch (error) {
+const pending = localStorage.getItem('pendingTicket');
+if (pending) {
+  localStorage.removeItem('pendingTicket');
+  window.location.href = `/scan/${pending}?uid=${user.uid}`;
+} else {
+  window.location.href = '/collection';
+}      } catch (error) {
         console.error(error);
         alert('Erreur de connexion');
       }
