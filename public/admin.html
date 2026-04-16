@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TakeYourTicket — Admin</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px 20px 60px; }
+
+    .header { max-width: 480px; margin: 0 auto 24px; }
+    .header h1 { font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
+    .header p { color: #555; font-size: 12px; margin-top: 4px; }
+
+    .form { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    label { color: #888; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: -6px; }
+    input { background: #161616; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 14px 14px; color: #fff; font-size: 14px; }
+    input::placeholder { color: #555; }
+    input:focus { outline: none; border-color: #555; }
+
+    .holo-check { display: flex; align-items: center; justify-content: space-between; background: #161616; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 14px; cursor: pointer; }
+    .holo-check label { margin: 0; color: #fff; font-size: 14px; text-transform: none; letter-spacing: 0; }
+    .holo-check input { width: 20px; height: 20px; cursor: pointer; }
+    .holo-hint { color: #555; font-size: 11px; margin-top: 4px; }
+
+    button { background: #fff; color: #000; border: none; border-radius: 12px; padding: 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary { background: transparent; color: #fff; border: 0.5px solid #333; }
+
+    .actions { max-width: 480px; margin: 24px auto 0; display: none; gap: 8px; }
+    .actions.visible { display: flex; }
+    .actions button { flex: 1; }
+
+    .status { max-width: 480px; margin: 16px auto 0; color: #888; font-size: 13px; text-align: center; }
+    .status.success { color: #4caf50; }
+    .status.error { color: #f44336; }
+
+    .qr-grid { max-width: 900px; margin: 24px auto 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .qr-item { background: #fff; padding: 10px; border-radius: 8px; text-align: center; }
+    .qr-item p { color: #000; font-size: 9px; margin-top: 6px; word-break: break-all; }
+    .qr-item .holo-badge-print { display: inline-block; background: #000; color: #fff; font-size: 8px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; letter-spacing: 0.5px; }
+
+    /* Hidden QR canvas container for PDF */
+    #qr-hidden { position: absolute; left: -9999px; top: -9999px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>TakeYourTicket — Admin</h1>
+    <p>Génération de tickets QR pour cinémas</p>
+  </div>
+
+  <div class="form">
+    <div>
+      <label>Film</label>
+      <input type="text" id="film" placeholder="Nom du film" />
+    </div>
+    <div>
+      <label>Cinéma</label>
+      <input type="text" id="cinema" placeholder="Nom du cinéma" />
+    </div>
+    <div>
+      <label>Date de séance</label>
+      <input type="date" id="date" />
+    </div>
+    <div>
+      <label>Quantité</label>
+      <input type="number" id="quantite" placeholder="Quantité" min="1" max="500" value="10" />
+    </div>
+    <div class="holo-check">
+      <div>
+        <label for="holo">Tickets holographiques</label>
+        <div class="holo-hint">Édition collector</div>
+      </div>
+      <input type="checkbox" id="holo" />
+    </div>
+    <button onclick="generer()" id="btn-generer">Générer les tickets</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="actions" id="actions">
+    <button class="btn-secondary" onclick="afficherApercu()">Aperçu</button>
+    <button onclick="telechargerPDF()">Télécharger PDF</button>
+  </div>
+
+  <div class="qr-grid" id="qr-grid"></div>
+  <div id="qr-hidden"></div>
+
+  <script>
+    const BASE_URL = window.location.origin;
+    let lastTickets = [];
+    let lastMeta = {};
+
+    async function generer() {
+      const film = document.getElementById('film').value.trim();
+      const cinema = document.getElementById('cinema').value.trim();
+      const date = document.getElementById('date').value;
+      const quantite = parseInt(document.getElementById('quantite').value);
+      const holo = document.getElementById('holo').checked;
+
+      const status = document.getElementById('status');
+      const btn = document.getElementById('btn-generer');
+
+      if (!film || !cinema || !date || !quantite) {
+        status.textContent = 'Remplis tous les champs.';
+        status.className = 'status error';
+        return;
+      }
+
+      btn.disabled = true;
+      status.textContent = 'Génération en cours…';
+      status.className = 'status';
+
+      try {
+        const res = await fetch('/api/generer-tickets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ film, cinema, date, quantite, holo })
+        });
+        const data = await res.json();
+        lastTickets = data.tickets;
+        lastMeta = { film, cinema, date, holo };
+        status.textContent = `${data.tickets.length} tickets générés${holo ? ' (HOLO)' : ''}.`;
+        status.className = 'status success';
+        document.getElementById('actions').classList.add('visible');
+        document.getElementById('qr-grid').innerHTML = '';
+      } catch(e) {
+        status.textContent = 'Erreur: ' + e.message;
+        status.className = 'status error';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function afficherApercu() {
+      const grid = document.getElementById('qr-grid');
+      grid.innerHTML = '';
+      for (const id of lastTickets) {
+        const div = document.createElement('div');
+        div.className = 'qr-item';
+        const qrDiv = document.createElement('div');
+        div.appendChild(qrDiv);
+        const p = document.createElement('p');
+        p.textContent = id.substring(0, 8);
+        div.appendChild(p);
+        if (lastMeta.holo) {
+          const b = document.createElement('div');
+          b.className = 'holo-badge-print';
+          b.textContent = 'HOLO';
+          div.appendChild(b);
+        }
+        grid.appendChild(div);
+        new QRCode(qrDiv, {
+          text: `${BASE_URL}/scan-page/${id}`,
+          width: 120,
+          height: 120,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+    }
+
+    async function telechargerPDF() {
+      const status = document.getElementById('status');
+      status.textContent = 'Création du PDF…';
+      status.className = 'status';
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const pageW = 210, pageH = 297;
+      const margin = 12;
+      const cols = 3, rows = 4;
+      const perPage = cols * rows;
+      const cellW = (pageW - margin * 2) / cols;
+      const cellH = (pageH - margin * 2) / rows;
+      const qrSize = 38;
+
+      const hidden = document.getElementById('qr-hidden');
+
+      for (let i = 0; i < lastTickets.length; i++) {
+        const id = lastTickets[i];
+        const pageIdx = Math.floor(i / perPage);
+        const localIdx = i % perPage;
+        const col = localIdx % cols;
+        const row = Math.floor(localIdx / cols);
+
+        if (localIdx === 0 && pageIdx > 0) pdf.addPage();
+
+        // Render QR off-screen
+        hidden.innerHTML = '';
+        const qrDiv = document.createElement('div');
+        hidden.appendChild(qrDiv);
+        new QRCode(qrDiv, {
+          text: `${BASE_URL}/scan-page/${id}`,
+          width: 256,
+          height: 256,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+        await new Promise(r => setTimeout(r, 30));
+        const canvas = qrDiv.querySelector('canvas');
+        const dataUrl = canvas.toDataURL('image/png');
+
+        const x = margin + col * cellW;
+        const y = margin + row * cellH;
+
+        // Cell border (light grey, cut guide)
+        pdf.setDrawColor(220);
+        pdf.setLineWidth(0.2);
+        pdf.rect(x, y, cellW, cellH);
+
+        // QR code centered horizontally
+        const qrX = x + (cellW - qrSize) / 2;
+        const qrY = y + 6;
+        pdf.addImage(dataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+
+        // Text below
+        const textY = qrY + qrSize + 6;
+        pdf.setTextColor(0);
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(lastMeta.film, x + cellW / 2, textY, { align: 'center', maxWidth: cellW - 4 });
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(7);
+        pdf.setTextColor(120);
+        pdf.text(lastMeta.cinema, x + cellW / 2, textY + 4, { align: 'center', maxWidth: cellW - 4 });
+        pdf.text(formatDate(lastMeta.date), x + cellW / 2, textY + 8, { align: 'center' });
+        pdf.setFontSize(6);
+        pdf.setTextColor(160);
+        pdf.text(id.substring(0, 8), x + cellW / 2, textY + 12, { align: 'center' });
+
+        if (lastMeta.holo) {
+          pdf.setFillColor(0);
+          pdf.setTextColor(255);
+          pdf.setFontSize(6);
+          pdf.setFont(undefined, 'bold');
+          pdf.roundedRect(x + cellW / 2 - 7, textY + 14, 14, 4, 1, 1, 'F');
+          pdf.text('HOLO', x + cellW / 2, textY + 17, { align: 'center' });
+        }
+      }
+
+      hidden.innerHTML = '';
+      const filename = `tickets-${lastMeta.film.replace(/\s+/g, '-')}-${lastMeta.date}.pdf`;
+      pdf.save(filename);
+
+      status.textContent = `PDF téléchargé (${lastTickets.length} tickets).`;
+      status.className = 'status success';
+    }
+
+    function formatDate(str) {
+      const d = new Date(str);
+      if (isNaN(d)) return str;
+      return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+  </script>
+</body>
+</html>

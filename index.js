@@ -110,6 +110,10 @@ app.get('/profil', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'profil.html'));
 });
 
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`TakeYourTicket tourne sur http://localhost:${PORT}`);
 });
