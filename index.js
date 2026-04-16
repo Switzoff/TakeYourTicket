@@ -32,12 +32,12 @@ app.use(express.json());
 app.use(express.static('public'));
 
 app.post('/api/generer-tickets', async (req, res) => {
-  const { film, cinema, date, quantite } = req.body;
+  const { film, cinema, date, quantite, holo } = req.body;
   const ticketsGeneres = [];
   for (let i = 0; i < quantite; i++) {
     const id = uuidv4();
     await db.collection('tickets').doc(id).set({
-      id, film, cinema, date, scanne: false, proprietaire: null
+      id, film, cinema, date, scanne: false, proprietaire: null, holo: holo || false
     });
     ticketsGeneres.push(id);
   }
@@ -59,6 +59,7 @@ app.get('/scan/:id', async (req, res) => {
       cinema: ticket.cinema,
       date: ticket.date,
       ticketId: id,
+      holo: ticket.holo || false,
       createdAt: new Date()
     });
   }
@@ -99,6 +100,14 @@ app.get('/api/collections', async (req, res) => {
 
 app.get('/scan-page/:id', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'scan.html'));
+});
+
+app.get('/scanner', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'scanner.html'));
+});
+
+app.get('/profil', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'profil.html'));
 });
 
 app.listen(PORT, () => {

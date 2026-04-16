@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TakeYourTicket — Profil</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 80px; }
+
+    .header { padding: 52px 20px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: #222; }
+    .avatar-placeholder { width: 72px; height: 72px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+    .username { font-size: 18px; font-weight: 600; }
+    .email { font-size: 12px; color: #555; }
+
+    .stats { display: flex; gap: 8px; padding: 0 20px 24px; }
+    .stat { flex: 1; background: #161616; border: 0.5px solid #2a2a2a; border-radius: 14px; padding: 14px 12px; text-align: center; }
+    .stat .val { font-size: 24px; font-weight: 500; }
+    .stat .lbl { color: #555; font-size: 10px; margin-top: 4px; }
+
+    .section { padding: 0 20px 12px; }
+    .section-title { color: #555; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+
+    .menu-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 14px;
+      padding: 16px; margin-bottom: 8px;
+      cursor: pointer; color: #fff; text-decoration: none; font-size: 14px;
+    }
+    .menu-item.danger { color: #e55; }
+    .menu-item svg { width: 16px; height: 16px; color: #555; }
+
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #0a0a0a;
+      border-top: 0.5px solid #1e1e1e;
+      display: flex;
+      padding: 12px 0 24px;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      text-decoration: none; color: #555; font-size: 10px;
+    }
+    .nav-item.active { color: #fff; }
+    .nav-item svg { width: 22px; height: 22px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div id="avatar-wrap"><div class="avatar-placeholder">👤</div></div>
+    <div class="username" id="username">—</div>
+    <div class="email" id="email"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="val" id="total">0</div><div class="lbl">Films vus</div></div>
+    <div class="stat"><div class="val" id="mois">0</div><div class="lbl">Ce mois</div></div>
+    <div class="stat"><div class="val" id="holos">0</div><div class="lbl">Holos</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Compte</div>
+    <button class="menu-item danger" onclick="seDeconnecter()">
+      Déconnexion
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+      </svg>
+    </button>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Collection
+    </a>
+    <a href="/scanner" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M3 9V6a1 1 0 0 1 1-1h3M15 5h3a1 1 0 0 1 1 1v3M21 15v3a1 1 0 0 1-1 1h-3M9 19H6a1 1 0 0 1-1-1v-3"/>
+      </svg>
+      Scanner
+    </a>
+    <a href="/profil" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+      Profil
+    </a>
+  </nav>
+
+  <script>
+    function seDeconnecter() {
+      localStorage.clear();
+      window.location.href = '/login';
+    }
+
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+      window.location.href = '/login';
+    } else {
+      document.getElementById('username').textContent = user.displayName || 'Utilisateur';
+      document.getElementById('email').textContent = user.email || '';
+      if (user.photoURL) {
+        document.getElementById('avatar-wrap').innerHTML = `<img class="avatar" src="${user.photoURL}" alt="avatar">`;
+      }
+      charger(user.uid);
+    }
+
+    async function charger(uid) {
+      try {
+        const res = await fetch(`/api/collections?uid=${uid}`);
+        const tickets = await res.json();
+        document.getElementById('total').textContent = tickets.length;
+        const maintenant = new Date();
+        document.getElementById('mois').textContent = tickets.filter(t => {
+          const d = new Date(t.date);
+          return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear();
+        }).length;
+        document.getElementById('holos').textContent = tickets.filter(t => t.holo).length;
+      } catch(e) { console.error(e); }
+    }
+  </script>
+</body>
+</html>

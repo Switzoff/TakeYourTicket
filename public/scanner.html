@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TakeYourTicket — Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 80px; }
+
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px 24px;
+      gap: 24px;
+    }
+
+    .title { font-size: 22px; font-weight: 700; text-align: center; }
+    .subtitle { color: #666; font-size: 14px; text-align: center; line-height: 1.5; max-width: 240px; }
+
+    .viewfinder-wrap {
+      position: relative;
+      width: min(300px, 80vw);
+      height: min(300px, 80vw);
+    }
+
+    .viewfinder {
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 2px solid #fff;
+      background: #111;
+      position: relative;
+    }
+
+    #reader {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* Override html5-qrcode default styles */
+    #reader video { width: 100% !important; height: 100% !important; object-fit: cover; }
+    #reader img { display: none; }
+    #reader__scan_region { width: 100% !important; height: 100% !important; }
+    #reader__dashboard { display: none !important; }
+    #reader__header_message { display: none !important; }
+    #reader__status_span { display: none !important; }
+
+    .scan-line {
+      position: absolute;
+      top: 50%;
+      left: 12%;
+      right: 12%;
+      height: 1.5px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 2px;
+      animation: scan 2s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    @keyframes scan {
+      0%, 100% { top: 25%; opacity: 0.4; }
+      50% { top: 75%; opacity: 0.9; }
+    }
+
+    .info-btn {
+      width: min(300px, 80vw);
+      border: 1px solid #333;
+      border-radius: 14px;
+      padding: 18px 20px;
+      background: transparent;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      text-decoration: none;
+    }
+    .info-btn span { font-size: 16px; }
+
+    .status-msg {
+      font-size: 13px;
+      color: #555;
+      text-align: center;
+      min-height: 20px;
+    }
+    .status-msg.success { color: #4caf50; }
+    .status-msg.error { color: #f44336; }
+
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #0a0a0a;
+      border-top: 0.5px solid #1e1e1e;
+      display: flex;
+      padding: 12px 0 24px;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      text-decoration: none; color: #555; font-size: 10px;
+      transition: color 0.15s;
+    }
+    .nav-item.active { color: #fff; }
+    .nav-item svg { width: 22px; height: 22px; }
+  </style>
+</head>
+<body>
+
+  <div class="content">
+    <div class="title">Scanner ton ticket</div>
+    <div class="subtitle">Place le QR code de ton ticket collector dans le cadre</div>
+
+    <div class="viewfinder-wrap">
+      <div class="viewfinder">
+        <div id="reader"></div>
+        <div class="scan-line"></div>
+      </div>
+    </div>
+
+    <div class="status-msg" id="status"></div>
+
+    <a class="info-btn" href="mailto:contact@takeyourticket.fr">
+      Comment générer les QR codes ?
+      <span>↗</span>
+    </a>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Collection
+    </a>
+    <a href="/scanner" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M3 9V6a1 1 0 0 1 1-1h3M15 5h3a1 1 0 0 1 1 1v3M21 15v3a1 1 0 0 1-1 1h-3M9 19H6a1 1 0 0 1-1-1v-3"/>
+      </svg>
+      Scanner
+    </a>
+    <a href="/profil" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+      Profil
+    </a>
+  </nav>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) {
+      window.location.href = '/login';
+    }
+
+    const statusEl = document.getElementById('status');
+    let scanning = true;
+
+    const html5QrCode = new Html5Qrcode('reader');
+
+    html5QrCode.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+      (decodedText) => {
+        if (!scanning) return;
+        scanning = false;
+
+        let ticketId = decodedText.trim();
+        try {
+          const url = new URL(decodedText);
+          const parts = url.pathname.split('/');
+          ticketId = parts[parts.length - 1];
+        } catch {}
+
+        statusEl.textContent = 'QR code détecté…';
+        statusEl.className = 'status-msg';
+
+        html5QrCode.stop().then(() => {
+          window.location.href = '/scan-page/' + ticketId;
+        }).catch(() => {
+          window.location.href = '/scan-page/' + ticketId;
+        });
+      },
+      () => {}
+    ).catch(() => {
+      statusEl.textContent = 'Impossible d\'accéder à la caméra.';
+      statusEl.className = 'status-msg error';
+    });
+  </script>
+</body>
+</html>
