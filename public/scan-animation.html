@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>TakeYourTicket</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    #canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+    .flash {
+      position: fixed; inset: 0; background: white; z-index: 100;
+      animation: flash 0.5s ease-out both;
+      pointer-events: none;
+    }
+    @keyframes flash { 0% { opacity: 0.8; } 100% { opacity: 0; } }
+
+    .scene {
+      position: relative; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+    }
+
+    .holo-ring {
+      --ring-gradient: conic-gradient(from 0deg, #ff006680, #ff6b0080, #ffe60080, #00ff8880, #00b4ff80, #8b00ff80, #ff006680);
+      position: relative; width: 220px; height: 220px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .holo-ring::before, .holo-ring::after {
+      content: ''; position: absolute; border-radius: 50%;
+      animation: spin 3s linear infinite;
+    }
+    .holo-ring::before {
+      inset: -4px;
+      background: var(--ring-gradient);
+      -webkit-mask: radial-gradient(transparent 48%, black 50%);
+      mask: radial-gradient(transparent 48%, black 50%);
+      filter: blur(2px);
+    }
+    .holo-ring::after { inset: 8px; border: 1px solid rgba(255,255,255,0.15); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .poster-wrap {
+      width: 180px; height: 180px; border-radius: 50%; overflow: hidden;
+      position: relative; z-index: 2;
+      animation: posterIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+      animation-delay: 0.4s;
+      box-shadow: 0 0 60px rgba(255,255,255,0.08);
+    }
+    @keyframes posterIn {
+      from { transform: scale(0) rotate(-10deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+    }
+    .poster-wrap img { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.2); }
+    .poster-placeholder {
+      width: 100%; height: 100%; background: #111;
+      display: flex; align-items: center; justify-content: center; font-size: 64px;
+    }
+    .shimmer {
+      position: absolute; inset: 0; border-radius: 50%; z-index: 3;
+      background: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%);
+      background-size: 200% 200%;
+      animation: shimmer 2.5s ease-in-out infinite; animation-delay: 1s;
+    }
+    @keyframes shimmer {
+      0%  { background-position: -100% -100%; }
+      50% { background-position:  100%  100%; }
+      100%{ background-position: -100% -100%; }
+    }
+
+    .title-group {
+      text-align: center;
+      animation: fadeUp 0.6s ease both; animation-delay: 0.8s;
+    }
+    .title-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+    .film-title  { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+    .holo-tag {
+      display: inline-block; margin-top: 6px;
+      border: 1px solid rgba(255,255,255,0.25); border-radius: 20px;
+      padding: 3px 12px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05);
+      animation: pulse 2s ease-in-out infinite; animation-delay: 1.5s;
+    }
+    @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+    .added-msg {
+      font-size: 13px; color: #4caf50; letter-spacing: 1px;
+      animation: fadeUp 0.5s ease both; animation-delay: 1.2s;
+    }
+    @keyframes fadeUp {
+      from { transform: translateY(16px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="flash"></div>
+
+  <div class="scene">
+    <div class="holo-ring" id="holoRing">
+      <div class="poster-wrap">
+        <img id="poster" alt="" style="display:none">
+        <div class="poster-placeholder" id="placeholder">🎬</div>
+        <div class="shimmer"></div>
+      </div>
+    </div>
+    <div class="title-group">
+      <div class="title-label">Ticket collector</div>
+      <div class="film-title" id="filmTitle">—</div>
+      <div class="holo-tag" id="holoTag" style="display:none">✦ Holo</div>
+    </div>
+    <div class="added-msg">✓ Ajouté à ta collection</div>
+  </div>
+
+  <script>
+  // ── PARAMS ──────────────────────────────────────────────────────────────────
+  const params = new URLSearchParams(location.search);
+  const film = params.get('film') || 'Film';
+  const holo = params.get('holo') === 'true';
+
+  document.getElementById('filmTitle').textContent = film;
+  if (holo) document.getElementById('holoTag').style.display = 'inline-block';
+
+  fetch('/api/affiche/' + encodeURIComponent(film))
+    .then(r => r.json())
+    .then(d => {
+      if (d.affiche) {
+        const img = document.getElementById('poster');
+        img.onload = () => { img.style.display='block'; document.getElementById('placeholder').style.display='none'; };
+        img.src = d.affiche;
+      }
+    }).catch(() => {});
+
+  // ── CANVAS ──────────────────────────────────────────────────────────────────
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const W = canvas.width, H = canvas.height, CX = W/2, CY = H/2;
+
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+
+  // ── DÉTECTION DU FILM ────────────────────────────────────────────────────────
+  const fn = film.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  let theme = 'default';
+  if (/spider.?man/.test(fn))                                                   theme = 'spiderman';
+  else if (/\bmario\b/.test(fn))                                                theme = 'mario';
+  else if (/batman|dark.?knight/.test(fn))                                      theme = 'batman';
+  else if (/star.?wars|jedi|sith|skywalker|mandalorian|rogue.?one/.test(fn))   theme = 'starwars';
+  else if (/harry.?potter|hogwarts|fantastic.?beasts/.test(fn))                 theme = 'harrypotter';
+  else if (/iron.?man|avengers|thor|captain.?america|black.?panther|doctor.?strange/.test(fn)) theme = 'marvel';
+  else if (/frozen|encanto|moana|toy.?story|coco/.test(fn))                    theme = 'pixar';
+  else if (/jurassic|dinosaur/.test(fn))                                        theme = 'jurassic';
+
+  // ── COULEUR ANNEAU PAR THÈME ─────────────────────────────────────────────────
+  const RING = {
+    spiderman:   'conic-gradient(from 0deg,#cc000090,#003ca090,#ffffff60,#cc000090)',
+    mario:       'conic-gradient(from 0deg,#ff000090,#ffe60090,#00aa0090,#ff000090)',
+    batman:      'conic-gradient(from 0deg,#ffd70080,#11110080,#ffd70080,#11110080,#ffd70080)',
+    starwars:    'conic-gradient(from 0deg,#0077ff90,#00ffcc80,#ff222080,#0077ff90)',
+    harrypotter: 'conic-gradient(from 0deg,#ffd70090,#cc00cc80,#6600cc80,#ffd70090)',
+    marvel:      'conic-gradient(from 0deg,#ffd70080,#0099ff90,#cc000080,#ffd70080)',
+    pixar:       'conic-gradient(from 0deg,#00ccff80,#ff66cc80,#ffe60080,#00ff9980,#00ccff80)',
+    jurassic:    'conic-gradient(from 0deg,#33aa0090,#88660080,#33aa0090,#88660080)',
+    default:     'conic-gradient(from 0deg,#ff006680,#ff6b0080,#ffe60080,#00ff8880,#00b4ff80,#8b00ff80,#ff006680)',
+  };
+  document.getElementById('holoRing').style.setProperty('--ring-gradient', RING[theme] || RING.default);
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // ANIMATIONS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // ── DEFAULT : particules holographiques ──────────────────────────────────────
+  function animDefault() {
+    const COLS = ['#ff0066','#ff6b00','#ffe600','#00ff88','#00b4ff','#8b00ff','#fff'];
+    const pts  = Array.from({length:100}, () => ({
+      x:Math.random()*W, y:H+Math.random()*200,
+      r:rnd(0.5,3), vy:rnd(0.5,2), vx:rnd(-0.4,0.4),
+      c:COLS[Math.floor(Math.random()*COLS.length)],
+      a:rnd(0.2,0.8), d:Math.random()*60,
+    }));
+    let f=0;
+    (function loop() {
+      ctx.clearRect(0,0,W,H);
+      for (const p of pts) {
+        if (f<p.d) continue;
+        p.y-=p.vy; p.x+=p.vx; p.a-=0.0015;
+        if (p.y<-10||p.a<=0) { p.y=H+10; p.x=Math.random()*W; p.a=rnd(0.2,0.8); }
+        ctx.globalAlpha=p.a; ctx.fillStyle=p.c;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha=1; f++;
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  // ── SPIDER-MAN : toile qui se tisse ─────────────────────────────────────────
+  function animSpiderman() {
+    document.body.style.background = '#060005';
+
+    const SPOKES = 22;
+    const RINGS  = [55,108,168,234,307,387,475,572];
+    const angles = Array.from({length:SPOKES}, (_,i) => (i/SPOKES)*Math.PI*2 - Math.PI/2);
+
+    // Distance du centre au bord de l'écran dans une direction
+    function edgeDist(a) {
+      const ca=Math.abs(Math.cos(a)), sa=Math.abs(Math.sin(a));
+      const fw = ca<0.001 ? Infinity : (Math.cos(a)>0 ? W-CX : CX)/ca;
+      const fh = sa<0.001 ? Infinity : (Math.sin(a)>0 ? H-CY : CY)/sa;
+      return Math.min(fw,fh)*1.08;
+    }
+
+    const spokeP = new Float32Array(SPOKES);   // progression 0→1 par rayon
+    const ringP  = new Float32Array(RINGS.length);
+
+    // Particules rouge/bleu
+    const pts = Array.from({length:85}, () => ({
+      x:Math.random()*W, y:H+Math.random()*150,
+      r:rnd(0.5,2.5), vy:rnd(0.8,2.2), vx:rnd(-1,1),
+      c:Math.random()>0.5?'#dd0000':'#4455ff', a:rnd(0.2,0.7),
+    }));
+
+    let frame=0;
+    (function loop() {
+      ctx.clearRect(0,0,W,H);
+
+      // Lueur rouge centrale
+      const g=ctx.createRadialGradient(CX,CY,0,CX,CY,Math.min(W,H)*0.55);
+      g.addColorStop(0,'rgba(180,0,0,0.13)'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+      // Avancer les rayons (décalés)
+      for (let i=0;i<SPOKES;i++) {
+        if (frame >= i*2) spokeP[i] = Math.min(1, (frame-i*2)/28);
+      }
+      // Avancer les anneaux (après les rayons)
+      const ringStart = SPOKES*2+12;
+      for (let i=0;i<RINGS.length;i++) {
+        const sf = ringStart+i*11;
+        if (frame >= sf) ringP[i] = Math.min(1, (frame-sf)/32);
+      }
+
+      // Dessiner les rayons
+      ctx.lineWidth=0.7;
+      for (let i=0;i<SPOKES;i++) {
+        if (spokeP[i]<=0) continue;
+        const len=edgeDist(angles[i])*spokeP[i];
+        ctx.strokeStyle=`rgba(200,210,255,${0.45*spokeP[i]})`;
+        ctx.beginPath(); ctx.moveTo(CX,CY);
+        ctx.lineTo(CX+Math.cos(angles[i])*len, CY+Math.sin(angles[i])*len);
+        ctx.stroke();
+      }
+
+      // Dessiner les anneaux (polygones entre les rayons)
+      ctx.lineWidth=0.55;
+      for (let ri=0;ri<RINGS.length;ri++) {
+        if (ringP[ri]<=0) continue;
+        const r=RINGS[ri], alpha=Math.min(0.45, ringP[ri]*0.9);
+        ctx.strokeStyle=`rgba(200,215,255,${alpha})`;
+        const segs=Math.floor(SPOKES*ringP[ri]);
+        ctx.beginPath();
+        for (let i=0;i<=segs;i++) {
+          const ai=i%SPOKES;
+          if (r>edgeDist(angles[ai])) continue;
+          const px=CX+Math.cos(angles[ai])*r, py=CY+Math.sin(angles[ai])*r;
+          i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+        }
+        if (ringP[ri]>=1 && r<=edgeDist(angles[0])) {
+          ctx.lineTo(CX+Math.cos(angles[0])*r, CY+Math.sin(angles[0])*r);
+        }
+        ctx.stroke();
+      }
+
+      // Particules
+      for (const p of pts) {
+        p.y-=p.vy; p.x+=p.vx; p.a-=0.0012;
+        if (p.y<-10||p.a<=0) { p.y=H+10; p.x=Math.random()*W; p.a=rnd(0.2,0.7); }
+        ctx.globalAlpha=p.a; ctx.fillStyle=p.c;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha=1; frame++;
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  // ── MARIO : étoiles + pièces ─────────────────────────────────────────────────
+  function animMario() {
+    document.body.style.background = '#000d20';
+
+    function drawStar(x,y,r,rot,col,a) {
+      ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+      ctx.globalAlpha=a; ctx.fillStyle=col; ctx.beginPath();
+      for (let i=0;i<10;i++) {
+        const ang=(i*Math.PI)/5-Math.PI/2, rad=i%2===0?r:r*0.4;
+        i===0?ctx.moveTo(Math.cos(ang)*rad,Math.sin(ang)*rad):ctx.lineTo(Math.cos(ang)*rad,Math.sin(ang)*rad);
+      }
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    function drawCoin(x,y,sc,ph,a) {
+      const w=Math.max(1,13*sc*Math.abs(Math.cos(ph))), h=20*sc;
+      ctx.globalAlpha=a; ctx.fillStyle='#ffe000';
+      ctx.beginPath(); ctx.ellipse(x,y,w,h,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#bb8800';
+      ctx.beginPath(); ctx.ellipse(x,y,Math.max(0.5,w*0.5),h*0.6,0,0,Math.PI*2); ctx.fill();
+    }
+
+    const stars = Array.from({length:60}, () => ({
+      x:Math.random()*W, y:H+Math.random()*200,
+      r:rnd(4,11), rot:Math.random()*Math.PI*2, rs:(Math.random()-0.5)*0.1,
+      vy:rnd(1,3), vx:rnd(-1.5,1.5), a:rnd(0.3,0.9),
+      c:Math.random()>0.3?'#ffe000':(Math.random()>0.5?'#fff':'#ff9900'),
+    }));
+    const coins = Array.from({length:20}, () => ({
+      x:Math.random()*W, y:H+Math.random()*300,
+      sc:rnd(0.4,0.9), ph:Math.random()*Math.PI*2,
+      vy:rnd(1,2.5), vx:rnd(-0.8,0.8), a:0.85,
+    }));
+
+    (function loop() {
+      ctx.clearRect(0,0,W,H);
+      const g=ctx.createRadialGradient(CX,CY,0,CX,CY,320);
+      g.addColorStop(0,'rgba(255,200,0,0.07)'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      for (const s of stars) {
+        s.y-=s.vy; s.x+=s.vx; s.rot+=s.rs; s.a-=0.0018;
+        if(s.y<-20||s.a<=0){s.y=H+20;s.x=Math.random()*W;s.a=rnd(0.3,0.9);}
+        drawStar(s.x,s.y,s.r,s.rot,s.c,s.a);
+      }
+      for (const c of coins) {
+        c.y-=c.vy; c.x+=c.vx; c.ph+=0.13;
+        if(c.y<-30){c.y=H+30;c.x=Math.random()*W;}
+        drawCoin(c.x,c.y,c.sc,c.ph,c.a);
+      }
+      ctx.globalAlpha=1;
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  // ── BATMAN : chauves-souris + bat signal ─────────────────────────────────────
+  function animBatman() {
+    document.body.style.background = '#030303';
+    const bats = Array.from({length:20}, () => ({
+      x:Math.random()*W, y:Math.random()*H,
+      vx:(rnd(1.5,3))*(Math.random()>0.5?1:-1), vy:rnd(-0.8,0.8),
+      sc:rnd(0.3,0.65), wing:Math.random()*Math.PI*2, ws:0.11+Math.random()*0.08,
+      a:rnd(0.3,0.6),
+    }));
+    let sigA=0;
+
+    function drawBat(b) {
+      ctx.save(); ctx.translate(b.x,b.y); ctx.scale(b.sc,b.sc);
+      if(b.vx<0) ctx.scale(-1,1);
+      ctx.globalAlpha=b.a; ctx.fillStyle='#0a0a0a';
+      const w=Math.sin(b.wing);
+      ctx.beginPath(); ctx.ellipse(0,1,6,4,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(-8,-4,-18,w*10,-26,w*8); ctx.bezierCurveTo(-18,w*14,-8,6,0,4); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.bezierCurveTo(8,-4,18,w*10,26,w*8);  ctx.bezierCurveTo(18,w*14,8,6,0,4);  ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-3,-3); ctx.lineTo(-5,-11); ctx.lineTo(-1,-3); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(3,-3);  ctx.lineTo(5,-11);  ctx.lineTo(1,-3);  ctx.fill();
+      ctx.restore();
+    }
+
+    (function loop() {
+      ctx.clearRect(0,0,W,H);
+      sigA = Math.min(0.2,sigA+0.003);
+      const g=ctx.createRadialGradient(CX,CY,0,CX,CY,H*0.6);
+      g.addColorStop(0,`rgba(240,200,0,${sigA})`); g.addColorStop(0.5,`rgba(180,140,0,${sigA*0.35})`); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle=`rgba(255,200,0,${sigA*3})`; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(CX,CY,68,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(CX,CY,88,0,Math.PI*2); ctx.stroke();
+      for (const b of bats) {
+        b.x+=b.vx; b.y+=b.vy; b.wing+=b.ws;
+        if(b.x<-80)b.x=W+80; if(b.x>W+80)b.x=-80;
+        if(b.y<-30)b.y=H+30; if(b.y>H+30)b.y=-30;
+        drawBat(b);
+      }
+      ctx.globalAlpha=1;
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  // ── STAR WARS : hyperspace ───────────────────────────────────────────────────
+  function animStarwars() {
+    document.body.style.background = '#000005';
+    const lines = Array.from({length:220}, () => {
+      const a=Math.random()*Math.PI*2;
+      return { angle:a, dist:Math.random()*25+5, spd:rnd(3,10),
+               c:Math.random()>0.6?'#fff':(Math.random()>0.5?'#aabbff':'#ffe8aa'),
+               a:rnd(0.2,1) };
+    });
+    let t=0;
+    const SABER=[[0,120,255],[255,40,40],[0,200,80]];
+    (function loop() {
+      ctx.fillStyle='rgba(0,0,5,0.28)'; ctx.fillRect(0,0,W,H);
+      for (const l of lines) {
+        const d=l.dist+l.spd*t*0.5;
+        if(d>Math.hypot(W,H)){l.dist=Math.random()*20; continue;}
+        const nd=d+l.spd*4;
+        ctx.globalAlpha=Math.min(1,l.a*(d/250));
+        ctx.strokeStyle=l.c; ctx.lineWidth=Math.min(2.5,d/80);
+        ctx.beginPath();
+        ctx.moveTo(CX+Math.cos(l.angle)*d, CY+Math.sin(l.angle)*d);
+        ctx.lineTo(CX+Math.cos(l.angle)*nd,CY+Math.sin(l.angle)*nd);
+        ctx.stroke();
+      }
+      const sc=SABER[Math.floor(t/80)%3];
+      const g=ctx.createRadialGradient(CX,CY,0,CX,CY,160);
+      g.addColorStop(0,`rgba(${sc},0.13)`); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.globalAlpha=1; ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      t++; requestAnimationFrame(loop);
+    })();
+  }
+
+  // ── HARRY POTTER : étincelles dorées ────────────────────────────────────────
+  function animHarryPotter() {
+    document.body.style.background = '#02000e';
+    const sparks = Array.from({length:90}, () => ({
+      x:CX+(Math.random()-0.5)*100, y:CY+(Math.random()-0.5)*100,
+      angle:Math.random()*Math.PI*2, spd:rnd(1,4),
+      life:Math.random(), maxL:rnd(0.3,0.8), r:rnd(0.5,2.5),
+      c:Math.random()>0.5?'#ffd700':(Math.random()>0.5?'#ff8800':'#ffeeaa'),
+      trail:[],
+    }));
+    const bgDots = Array.from({length:70}, () => ({
+      x:Math.random()*W, y:Math.random()*H, r:rnd(0.3,1.2), spd:rnd(0.005,0.025),
+    }));
+    (function loop() {
+      ctx.fillStyle='rgba(2,0,14,0.22)'; ctx.fillRect(0,0,W,H);
+      for (const d of bgDots) {
+        const a=Math.abs(Math.sin(Date.now()*d.spd*0.001+d.x))*0.35;
+        ctx.globalAlpha=a; ctx.fillStyle='#fff';
+        ctx.beginPath(); ctx.arc(d.x,d.y,d.r,0,Math.PI*2); ctx.fill();
+      }
+      const g=ctx.createRadialGradient(CX,CY,0,CX,CY,260);
+      g.addColorStop(0,'rgba(120,0,200,0.09)'); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.globalAlpha=1; ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      for (const s of sparks) {
+        s.x+=Math.cos(s.angle)*s.spd; s.y+=Math.sin(s.angle)*s.spd+0.04;
+        s.spd*=0.984; s.life-=0.013;
+        s.trail.push({x:s.x,y:s.y}); if(s.trail.length>10) s.trail.shift();
+        if(s.life<=0){
+          s.x=CX+(Math.random()-0.5)*130; s.y=CY+(Math.random()-0.5)*130;
+          s.angle=Math.random()*Math.PI*2; s.spd=rnd(1.5,4);
+          s.life=s.maxL; s.trail=[];
+        }
+        for(let i=0;i<s.trail.length-1;i++){
+          ctx.globalAlpha=(i/s.trail.length)*s.life*0.85;
+          ctx.strokeStyle=s.c; ctx.lineWidth=s.r*(0.3+i/s.trail.length);
+          ctx.beginPath(); ctx.moveTo(s.trail[i].x,s.trail[i].y); ctx.lineTo(s.trail[i+1].x,s.trail[i+1].y); ctx.stroke();
+        }
+        ctx.globalAlpha=s.life; ctx.fillStyle=s.c;
+        ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha=1; requestAnimationFrame(loop);
+    })();
+  }
+
+  // ── MARVEL : arc reactor ─────────────────────────────────────────────────────
+  function animMarvel() {
+    document.body.style.background = '#000510';
+    const rings = Array.from({length:6}, (_,i) => ({
+      r:50+i*40, angle:i*(Math.PI/3), spd:(i%2===0?1:-1)*0.018, a:0.22+i*0.04,
+    }));
+    const pts = Array.from({length:130}, () => {
+      const a=Math.random()*Math.PI*2;
+      return { x:CX,y:CY, vx:Math.cos(a)*rnd(0.5,4), vy:Math.sin(a)*rnd(0.5,4),
+               a:rnd(0.2,0.9), r:rnd(0.5,2.5),
+               c:Math.random()>0.5?'#00b4ff':(Math.random()>0.5?'#8888ff':'#ffd700'),
+               life:Math.random() };
+    });
+    (function loop() {
+      ctx.fillStyle='rgba(0,5,16,0.22)'; ctx.fillRect(0,0,W,H);
+      for (const ring of rings) {
+        ring.angle+=ring.spd;
+        ctx.save(); ctx.translate(CX,CY); ctx.rotate(ring.angle);
+        ctx.strokeStyle=`rgba(0,180,255,${ring.a})`; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.arc(0,0,ring.r,0,Math.PI*1.85); ctx.stroke();
+        for(let i=0;i<3;i++){
+          const a=(i/3)*Math.PI*2;
+          ctx.fillStyle=`rgba(0,220,255,${ring.a*2})`;
+          ctx.beginPath(); ctx.arc(Math.cos(a)*ring.r,Math.sin(a)*ring.r,2.5,0,Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+      }
+      for (const p of pts) {
+        p.x+=p.vx; p.y+=p.vy; p.life-=0.009;
+        if(p.life<=0){
+          p.x=CX; p.y=CY; const a=Math.random()*Math.PI*2;
+          p.vx=Math.cos(a)*rnd(0.5,4); p.vy=Math.sin(a)*rnd(0.5,4);
+          p.life=rnd(0.2,0.9);
+        }
+        ctx.globalAlpha=p.life*p.a; ctx.fillStyle=p.c;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha=1; requestAnimationFrame(loop);
+    })();
+  }
+
+  // ── GÉNÉRIQUE PARTICULES (Pixar, Jurassic) ───────────────────────────────────
+  function animParticles(bg, cols, glow) {
+    document.body.style.background = bg;
+    const pts = Array.from({length:100}, () => ({
+      x:Math.random()*W, y:H+Math.random()*200,
+      r:rnd(0.5,3), vy:rnd(0.8,2.2), vx:rnd(-0.8,0.8),
+      c:cols[Math.floor(Math.random()*cols.length)],
+      a:rnd(0.2,0.8), d:Math.random()*50,
+    }));
+    let f=0;
+    (function loop() {
+      ctx.clearRect(0,0,W,H);
+      const g=ctx.createRadialGradient(CX,CY,0,CX,CY,300);
+      g.addColorStop(0,glow); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      for(const p of pts){
+        if(f<p.d)continue;
+        p.y-=p.vy; p.x+=p.vx; p.a-=0.0018;
+        if(p.y<-10||p.a<=0){p.y=H+10;p.x=Math.random()*W;p.a=rnd(0.2,0.8);}
+        ctx.globalAlpha=p.a; ctx.fillStyle=p.c;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha=1; f++; requestAnimationFrame(loop);
+    })();
+  }
+
+  // ── LANCEMENT ────────────────────────────────────────────────────────────────
+  const ANIMS = {
+    spiderman:   animSpiderman,
+    mario:       animMario,
+    batman:      animBatman,
+    starwars:    animStarwars,
+    harrypotter: animHarryPotter,
+    marvel:      animMarvel,
+    pixar:       () => animParticles('#000820',['#00ccff','#ff66cc','#ffe600','#00ff99'],'rgba(0,200,255,0.08)'),
+    jurassic:    () => animParticles('#010805',['#33aa00','#88cc00','#006600','#ccff44'],'rgba(0,160,0,0.09)'),
+    default:     animDefault,
+  };
+  (ANIMS[theme] || ANIMS.default)();
+
+  // Redirect vers la collection après l'animation
+  setTimeout(() => { window.location.href = '/'; }, 4800);
+  </script>
+</body>
+</html>

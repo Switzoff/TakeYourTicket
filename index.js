@@ -63,7 +63,7 @@ app.get('/scan/:id', async (req, res) => {
       createdAt: new Date()
     });
   }
-  res.redirect(`/collection?film=${ticket.film}&cinema=${ticket.cinema}&date=${ticket.date}&ticketId=${id}`);
+  res.redirect(`/scan-animation?film=${encodeURIComponent(ticket.film)}&holo=${ticket.holo || false}`);
 });
 
 app.get('/api/tickets', async (req, res) => {
@@ -112,6 +112,10 @@ app.get('/profil', (req, res) => {
 
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/scan-animation', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'scan-animation.html'));
 });
 
 app.listen(PORT, () => {
