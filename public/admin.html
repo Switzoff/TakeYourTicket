@@ -156,8 +156,8 @@
     let rectoImage = null;
     let versoImage = null;
 
-    // Fixed position: bottom-center
-    const QR_POSITION = 'bottom-center';
+    // Fixed position: bottom-left
+    const QR_POSITION = 'bottom-left';
 
     // Live sliders
     const sizeSlider = document.getElementById('qr-size');
@@ -246,12 +246,25 @@
       });
       await new Promise(r => setTimeout(r, 40));
       const qrCanvas = qrDiv.querySelector('canvas');
+      const transparentQR = makeQRTransparent(qrCanvas);
+      ctx.drawImage(transparentQR, x, y, qrSize, qrSize);
+    }
 
-      // White padding behind QR for contrast
-      const pad = qrSize * 0.06;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(x - pad, y - pad, qrSize + pad * 2, qrSize + pad * 2);
-      ctx.drawImage(qrCanvas, x, y, qrSize, qrSize);
+    function makeQRTransparent(srcCanvas) {
+      const out = document.createElement('canvas');
+      out.width = srcCanvas.width;
+      out.height = srcCanvas.height;
+      const octx = out.getContext('2d');
+      octx.drawImage(srcCanvas, 0, 0);
+      const img = octx.getImageData(0, 0, out.width, out.height);
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) {
+          d[i + 3] = 0;
+        }
+      }
+      octx.putImageData(img, 0, 0);
+      return out;
     }
 
     async function generer() {
@@ -343,11 +356,8 @@
         });
         await new Promise(r => setTimeout(r, 40));
         const qrCanvas = qrDiv.querySelector('canvas');
-
-        const pad = qrSize * 0.06;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(x - pad, y - pad, qrSize + pad * 2, qrSize + pad * 2);
-        ctx.drawImage(qrCanvas, x, y, qrSize, qrSize);
+        const transparentQR = makeQRTransparent(qrCanvas);
+        ctx.drawImage(transparentQR, x, y, qrSize, qrSize);
 
         const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
         zip.file(`${filmSlug}-${id.substring(0, 8)}-recto.png`, blob);
