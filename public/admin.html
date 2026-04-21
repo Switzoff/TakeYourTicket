@@ -6,94 +6,265 @@
   <title>TakeYourTicket — Admin</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px 20px 60px; }
 
-    .header { max-width: 480px; margin: 0 auto 24px; }
+    .container { max-width: 760px; margin: 0 auto; }
+
+    .header { margin-bottom: 24px; }
     .header h1 { font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
     .header p { color: #555; font-size: 12px; margin-top: 4px; }
 
-    .form { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-    label { color: #888; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: -6px; }
-    input { background: #161616; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 14px 14px; color: #fff; font-size: 14px; }
+    .card { background: #111; border: 0.5px solid #1e1e1e; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+    .card-title { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #777; margin-bottom: 14px; }
+
+    .form { display: flex; flex-direction: column; gap: 12px; }
+    .row { display: flex; flex-direction: column; gap: 6px; }
+    label { color: #888; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+    input, select { background: #161616; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 12px 14px; color: #fff; font-size: 14px; width: 100%; }
     input::placeholder { color: #555; }
-    input:focus { outline: none; border-color: #555; }
+    input:focus, select:focus { outline: none; border-color: #555; }
+    input[type="file"] { padding: 10px; font-size: 12px; }
+    input[type="range"] { padding: 0; accent-color: #fff; }
 
-    .holo-check { display: flex; align-items: center; justify-content: space-between; background: #161616; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 14px; cursor: pointer; }
-    .holo-check label { margin: 0; color: #fff; font-size: 14px; text-transform: none; letter-spacing: 0; }
-    .holo-check input { width: 20px; height: 20px; cursor: pointer; }
-    .holo-hint { color: #555; font-size: 11px; margin-top: 4px; }
+    .holo-check { display: flex; align-items: center; justify-content: space-between; background: #161616; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 14px; cursor: pointer; }
+    .holo-check-label { color: #fff; font-size: 14px; }
+    .holo-check-hint { color: #555; font-size: 11px; margin-top: 2px; }
+    .holo-check input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; margin: 0; }
 
-    button { background: #fff; color: #000; border: none; border-radius: 12px; padding: 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    button { background: #fff; color: #000; border: none; border-radius: 10px; padding: 14px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; width: 100%; }
     button:hover { opacity: 0.85; }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-secondary { background: transparent; color: #fff; border: 0.5px solid #333; }
 
-    .actions { max-width: 480px; margin: 24px auto 0; display: none; gap: 8px; }
-    .actions.visible { display: flex; }
-    .actions button { flex: 1; }
+    .actions { display: none; gap: 8px; margin-top: 12px; }
+    .actions.visible { display: flex; flex-wrap: wrap; }
+    .actions button { flex: 1; min-width: 140px; }
 
-    .status { max-width: 480px; margin: 16px auto 0; color: #888; font-size: 13px; text-align: center; }
+    .status { color: #888; font-size: 13px; text-align: center; margin-top: 12px; min-height: 18px; }
     .status.success { color: #4caf50; }
     .status.error { color: #f44336; }
 
-    .qr-grid { max-width: 900px; margin: 24px auto 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-    .qr-item { background: #fff; padding: 10px; border-radius: 8px; text-align: center; }
-    .qr-item p { color: #000; font-size: 9px; margin-top: 6px; word-break: break-all; }
-    .qr-item .holo-badge-print { display: inline-block; background: #000; color: #fff; font-size: 8px; padding: 2px 6px; border-radius: 4px; margin-top: 4px; letter-spacing: 0.5px; }
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    .slider-row input { flex: 1; }
+    .slider-row .val { color: #fff; font-size: 13px; min-width: 40px; text-align: right; }
 
-    /* Hidden QR canvas container for PDF */
+    .preview-wrap { display: flex; justify-content: center; background: #0a0a0a; border: 0.5px dashed #333; border-radius: 10px; padding: 16px; min-height: 200px; align-items: center; }
+    .preview-wrap canvas { max-width: 100%; max-height: 400px; border-radius: 4px; }
+    .preview-empty { color: #555; font-size: 13px; text-align: center; }
+
+    .qr-grid { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+    .qr-item { background: #fff; padding: 8px; border-radius: 6px; text-align: center; }
+    .qr-item p { color: #000; font-size: 8px; margin-top: 4px; word-break: break-all; }
+
     #qr-hidden { position: absolute; left: -9999px; top: -9999px; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>TakeYourTicket — Admin</h1>
-    <p>Génération de tickets QR pour cinémas</p>
-  </div>
+  <div class="container">
+    <div class="header">
+      <h1>TakeYourTicket — Admin</h1>
+      <p>Génération de tickets QR pour cinémas</p>
+    </div>
 
-  <div class="form">
-    <div>
-      <label>Film</label>
-      <input type="text" id="film" placeholder="Nom du film" />
-    </div>
-    <div>
-      <label>Cinéma</label>
-      <input type="text" id="cinema" placeholder="Nom du cinéma" />
-    </div>
-    <div>
-      <label>Date de séance</label>
-      <input type="date" id="date" />
-    </div>
-    <div>
-      <label>Quantité</label>
-      <input type="number" id="quantite" placeholder="Quantité" min="1" max="500" value="10" />
-    </div>
-    <div class="holo-check">
-      <div>
-        <label for="holo">Tickets holographiques</label>
-        <div class="holo-hint">Édition collector</div>
+    <div class="card">
+      <div class="card-title">Informations</div>
+      <div class="form">
+        <div class="row">
+          <label>Film</label>
+          <input type="text" id="film" placeholder="Nom du film" />
+        </div>
+        <div class="row">
+          <label>Cinéma</label>
+          <input type="text" id="cinema" placeholder="Nom du cinéma" />
+        </div>
+        <div class="row">
+          <label>Date de séance</label>
+          <input type="date" id="date" />
+        </div>
+        <div class="row">
+          <label>Quantité</label>
+          <input type="number" id="quantite" min="1" max="500" value="1" />
+        </div>
+        <div class="holo-check">
+          <div>
+            <div class="holo-check-label">Tickets holographiques</div>
+            <div class="holo-check-hint">Édition collector</div>
+          </div>
+          <input type="checkbox" id="holo" />
+        </div>
       </div>
-      <input type="checkbox" id="holo" />
     </div>
+
+    <div class="card">
+      <div class="card-title">Visuels (optionnel)</div>
+      <div class="form">
+        <div class="row">
+          <label>Visuel recto (le QR sera placé dessus)</label>
+          <input type="file" id="recto" accept="image/png, image/jpeg" />
+        </div>
+        <div class="row">
+          <label>Visuel verso (optionnel)</label>
+          <input type="file" id="verso" accept="image/png, image/jpeg" />
+        </div>
+
+        <div class="row">
+          <label>Position du QR</label>
+          <select id="qr-position">
+            <option value="bottom-center">Bas — centre</option>
+            <option value="bottom-right">Bas — droite</option>
+            <option value="bottom-left">Bas — gauche</option>
+            <option value="top-right">Haut — droite</option>
+            <option value="top-left">Haut — gauche</option>
+            <option value="top-center">Haut — centre</option>
+            <option value="center">Centre</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label>Taille du QR</label>
+          <div class="slider-row">
+            <input type="range" id="qr-size" min="10" max="50" value="25" />
+            <div class="val" id="qr-size-val">25%</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Marge depuis le bord</label>
+          <div class="slider-row">
+            <input type="range" id="qr-margin" min="0" max="15" value="5" />
+            <div class="val" id="qr-margin-val">5%</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Aperçu</label>
+          <div class="preview-wrap" id="preview-wrap">
+            <div class="preview-empty">Upload un visuel recto pour voir l'aperçu</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <button onclick="generer()" id="btn-generer">Générer les tickets</button>
+    <div class="status" id="status"></div>
+
+    <div class="actions" id="actions">
+      <button class="btn-secondary" onclick="afficherApercu()">Aperçu QR</button>
+      <button class="btn-secondary" onclick="telechargerPDF()">PDF (grille)</button>
+      <button onclick="telechargerZIP()" id="btn-zip">Télécharger ZIP</button>
+    </div>
+
+    <div class="qr-grid" id="qr-grid"></div>
+    <div id="qr-hidden"></div>
   </div>
-
-  <div class="status" id="status"></div>
-
-  <div class="actions" id="actions">
-    <button class="btn-secondary" onclick="afficherApercu()">Aperçu</button>
-    <button onclick="telechargerPDF()">Télécharger PDF</button>
-  </div>
-
-  <div class="qr-grid" id="qr-grid"></div>
-  <div id="qr-hidden"></div>
 
   <script>
     const BASE_URL = window.location.origin;
     let lastTickets = [];
     let lastMeta = {};
+    let rectoImage = null;
+    let versoImage = null;
+
+    // Live sliders
+    const sizeSlider = document.getElementById('qr-size');
+    const marginSlider = document.getElementById('qr-margin');
+    const positionSelect = document.getElementById('qr-position');
+    sizeSlider.addEventListener('input', () => {
+      document.getElementById('qr-size-val').textContent = sizeSlider.value + '%';
+      updatePreview();
+    });
+    marginSlider.addEventListener('input', () => {
+      document.getElementById('qr-margin-val').textContent = marginSlider.value + '%';
+      updatePreview();
+    });
+    positionSelect.addEventListener('change', updatePreview);
+
+    // Image uploads
+    document.getElementById('recto').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      rectoImage = await loadImage(file);
+      updatePreview();
+    });
+    document.getElementById('verso').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      versoImage = await loadImage(file);
+    });
+
+    function loadImage(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    function getQRCoords(pos, w, h, qrSize, margin) {
+      switch(pos) {
+        case 'top-left': return { x: margin, y: margin };
+        case 'top-center': return { x: (w - qrSize) / 2, y: margin };
+        case 'top-right': return { x: w - qrSize - margin, y: margin };
+        case 'center': return { x: (w - qrSize) / 2, y: (h - qrSize) / 2 };
+        case 'bottom-left': return { x: margin, y: h - qrSize - margin };
+        case 'bottom-center': return { x: (w - qrSize) / 2, y: h - qrSize - margin };
+        case 'bottom-right': return { x: w - qrSize - margin, y: h - qrSize - margin };
+      }
+    }
+
+    async function updatePreview() {
+      const wrap = document.getElementById('preview-wrap');
+      if (!rectoImage) {
+        wrap.innerHTML = '<div class="preview-empty">Upload un visuel recto pour voir l\'aperçu</div>';
+        return;
+      }
+      wrap.innerHTML = '<canvas id="preview-canvas"></canvas>';
+      const canvas = document.getElementById('preview-canvas');
+      const ctx = canvas.getContext('2d');
+
+      const maxDim = 360;
+      const ratio = rectoImage.width / rectoImage.height;
+      if (ratio > 1) {
+        canvas.width = maxDim;
+        canvas.height = maxDim / ratio;
+      } else {
+        canvas.height = maxDim;
+        canvas.width = maxDim * ratio;
+      }
+
+      ctx.drawImage(rectoImage, 0, 0, canvas.width, canvas.height);
+
+      const pos = positionSelect.value;
+      const sizePct = parseInt(sizeSlider.value) / 100;
+      const marginPct = parseInt(marginSlider.value) / 100;
+      const qrSize = canvas.width * sizePct;
+      const margin = canvas.width * marginPct;
+      const { x, y } = getQRCoords(pos, canvas.width, canvas.height, qrSize, margin);
+
+      // Generate a sample QR for preview
+      const hidden = document.getElementById('qr-hidden');
+      hidden.innerHTML = '';
+      const qrDiv = document.createElement('div');
+      hidden.appendChild(qrDiv);
+      new QRCode(qrDiv, {
+        text: `${BASE_URL}/scan-page/sample`,
+        width: 256, height: 256,
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      await new Promise(r => setTimeout(r, 40));
+      const qrCanvas = qrDiv.querySelector('canvas');
+
+      // White padding behind QR for contrast
+      const pad = qrSize * 0.06;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x - pad, y - pad, qrSize + pad * 2, qrSize + pad * 2);
+      ctx.drawImage(qrCanvas, x, y, qrSize, qrSize);
+    }
 
     async function generer() {
       const film = document.getElementById('film').value.trim();
@@ -101,7 +272,6 @@
       const date = document.getElementById('date').value;
       const quantite = parseInt(document.getElementById('quantite').value);
       const holo = document.getElementById('holo').checked;
-
       const status = document.getElementById('status');
       const btn = document.getElementById('btn-generer');
 
@@ -124,16 +294,93 @@
         const data = await res.json();
         lastTickets = data.tickets;
         lastMeta = { film, cinema, date, holo };
-        status.textContent = `${data.tickets.length} tickets générés${holo ? ' (HOLO)' : ''}.`;
+        status.textContent = `${data.tickets.length} ticket(s) généré(s)${holo ? ' (HOLO)' : ''}.`;
         status.className = 'status success';
         document.getElementById('actions').classList.add('visible');
         document.getElementById('qr-grid').innerHTML = '';
+
+        document.getElementById('btn-zip').disabled = !rectoImage;
       } catch(e) {
-        status.textContent = 'Erreur: ' + e.message;
+        status.textContent = 'Erreur : ' + e.message;
         status.className = 'status error';
       } finally {
         btn.disabled = false;
       }
+    }
+
+    async function telechargerZIP() {
+      const status = document.getElementById('status');
+      if (!rectoImage) {
+        status.textContent = 'Upload un visuel recto d\'abord.';
+        status.className = 'status error';
+        return;
+      }
+
+      status.textContent = 'Création du ZIP…';
+      status.className = 'status';
+
+      const zip = new JSZip();
+      const pos = positionSelect.value;
+      const sizePct = parseInt(sizeSlider.value) / 100;
+      const marginPct = parseInt(marginSlider.value) / 100;
+
+      const W = rectoImage.naturalWidth;
+      const H = rectoImage.naturalHeight;
+      const qrSize = Math.round(W * sizePct);
+      const margin = Math.round(W * marginPct);
+      const { x, y } = getQRCoords(pos, W, H, qrSize, margin);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      const hidden = document.getElementById('qr-hidden');
+
+      const filmSlug = lastMeta.film.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+
+      for (let i = 0; i < lastTickets.length; i++) {
+        const id = lastTickets[i];
+        status.textContent = `Génération ${i + 1}/${lastTickets.length}…`;
+
+        ctx.clearRect(0, 0, W, H);
+        ctx.drawImage(rectoImage, 0, 0, W, H);
+
+        hidden.innerHTML = '';
+        const qrDiv = document.createElement('div');
+        hidden.appendChild(qrDiv);
+        new QRCode(qrDiv, {
+          text: `${BASE_URL}/scan-page/${id}`,
+          width: 512, height: 512,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+        await new Promise(r => setTimeout(r, 40));
+        const qrCanvas = qrDiv.querySelector('canvas');
+
+        const pad = qrSize * 0.06;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x - pad, y - pad, qrSize + pad * 2, qrSize + pad * 2);
+        ctx.drawImage(qrCanvas, x, y, qrSize, qrSize);
+
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        zip.file(`${filmSlug}-${id.substring(0, 8)}-recto.png`, blob);
+      }
+
+      if (versoImage) {
+        const vc = document.createElement('canvas');
+        vc.width = versoImage.naturalWidth;
+        vc.height = versoImage.naturalHeight;
+        vc.getContext('2d').drawImage(versoImage, 0, 0);
+        const vBlob = await new Promise(r => vc.toBlob(r, 'image/png'));
+        zip.file(`${filmSlug}-verso.png`, vBlob);
+      }
+
+      status.textContent = 'Compression du ZIP…';
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      saveAs(zipBlob, `tickets-${filmSlug}-${lastMeta.date}.zip`);
+
+      hidden.innerHTML = '';
+      status.textContent = `ZIP téléchargé (${lastTickets.length} ticket${lastTickets.length > 1 ? 's' : ''}).`;
+      status.className = 'status success';
     }
 
     function afficherApercu() {
@@ -147,17 +394,10 @@
         const p = document.createElement('p');
         p.textContent = id.substring(0, 8);
         div.appendChild(p);
-        if (lastMeta.holo) {
-          const b = document.createElement('div');
-          b.className = 'holo-badge-print';
-          b.textContent = 'HOLO';
-          div.appendChild(b);
-        }
         grid.appendChild(div);
         new QRCode(qrDiv, {
           text: `${BASE_URL}/scan-page/${id}`,
-          width: 120,
-          height: 120,
+          width: 110, height: 110,
           correctLevel: QRCode.CorrectLevel.H
         });
       }
@@ -190,63 +430,57 @@
 
         if (localIdx === 0 && pageIdx > 0) pdf.addPage();
 
-        // Render QR off-screen
         hidden.innerHTML = '';
         const qrDiv = document.createElement('div');
         hidden.appendChild(qrDiv);
         new QRCode(qrDiv, {
           text: `${BASE_URL}/scan-page/${id}`,
-          width: 256,
-          height: 256,
+          width: 256, height: 256,
           correctLevel: QRCode.CorrectLevel.H
         });
         await new Promise(r => setTimeout(r, 30));
         const canvas = qrDiv.querySelector('canvas');
         const dataUrl = canvas.toDataURL('image/png');
 
-        const x = margin + col * cellW;
-        const y = margin + row * cellH;
+        const xx = margin + col * cellW;
+        const yy = margin + row * cellH;
 
-        // Cell border (light grey, cut guide)
         pdf.setDrawColor(220);
         pdf.setLineWidth(0.2);
-        pdf.rect(x, y, cellW, cellH);
+        pdf.rect(xx, yy, cellW, cellH);
 
-        // QR code centered horizontally
-        const qrX = x + (cellW - qrSize) / 2;
-        const qrY = y + 6;
+        const qrX = xx + (cellW - qrSize) / 2;
+        const qrY = yy + 6;
         pdf.addImage(dataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
 
-        // Text below
         const textY = qrY + qrSize + 6;
         pdf.setTextColor(0);
         pdf.setFontSize(9);
         pdf.setFont(undefined, 'bold');
-        pdf.text(lastMeta.film, x + cellW / 2, textY, { align: 'center', maxWidth: cellW - 4 });
+        pdf.text(lastMeta.film, xx + cellW / 2, textY, { align: 'center', maxWidth: cellW - 4 });
         pdf.setFont(undefined, 'normal');
         pdf.setFontSize(7);
         pdf.setTextColor(120);
-        pdf.text(lastMeta.cinema, x + cellW / 2, textY + 4, { align: 'center', maxWidth: cellW - 4 });
-        pdf.text(formatDate(lastMeta.date), x + cellW / 2, textY + 8, { align: 'center' });
+        pdf.text(lastMeta.cinema, xx + cellW / 2, textY + 4, { align: 'center', maxWidth: cellW - 4 });
+        pdf.text(formatDate(lastMeta.date), xx + cellW / 2, textY + 8, { align: 'center' });
         pdf.setFontSize(6);
         pdf.setTextColor(160);
-        pdf.text(id.substring(0, 8), x + cellW / 2, textY + 12, { align: 'center' });
+        pdf.text(id.substring(0, 8), xx + cellW / 2, textY + 12, { align: 'center' });
 
         if (lastMeta.holo) {
           pdf.setFillColor(0);
           pdf.setTextColor(255);
           pdf.setFontSize(6);
           pdf.setFont(undefined, 'bold');
-          pdf.roundedRect(x + cellW / 2 - 7, textY + 14, 14, 4, 1, 1, 'F');
-          pdf.text('HOLO', x + cellW / 2, textY + 17, { align: 'center' });
+          pdf.roundedRect(xx + cellW / 2 - 7, textY + 14, 14, 4, 1, 1, 'F');
+          pdf.text('HOLO', xx + cellW / 2, textY + 17, { align: 'center' });
         }
       }
 
       hidden.innerHTML = '';
       const filename = `tickets-${lastMeta.film.replace(/\s+/g, '-')}-${lastMeta.date}.pdf`;
       pdf.save(filename);
-
-      status.textContent = `PDF téléchargé (${lastTickets.length} tickets).`;
+      status.textContent = `PDF téléchargé (${lastTickets.length}).`;
       status.className = 'status success';
     }
 
