@@ -119,14 +119,15 @@
   <div class="scene">
     <div class="holo-ring">
       <div class="poster-wrap">
-        <img id="poster" src="https://image.tmdb.org/t/p/original/38oHCHkELANKiqoLzWFxnJFNh4P.jpg" alt="Spider-Man">
+        <img id="poster" src="" alt="Spider-Man Brand New Day" style="display:none">
+        <div id="placeholder" style="width:100%;height:100%;background:#111;display:flex;align-items:center;justify-content:center;font-size:64px">🎬</div>
         <div class="shimmer"></div>
       </div>
     </div>
 
     <div class="title-group">
       <div class="title-label">Ticket collector</div>
-      <div class="film-title">Spider-Man</div>
+      <div class="film-title">Spider-Man Brand New Day</div>
       <div class="holo-tag">✦ Holo</div>
     </div>
 
@@ -180,6 +181,16 @@
       requestAnimationFrame((f) => animate(frame + 1));
     }
     animate(0);
+
+    fetch('/api/affiche/Spider-Man%20Brand%20New%20Day')
+      .then(r => r.json())
+      .then(d => {
+        if (d.affiche) {
+          const img = document.getElementById('poster');
+          img.onload = () => { img.style.display = 'block'; document.getElementById('placeholder').style.display = 'none'; };
+          img.src = d.affiche;
+        }
+      }).catch(() => {});
   </script>
 </body>
 </html>
