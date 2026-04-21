@@ -112,19 +112,6 @@
         </div>
 
         <div class="row">
-          <label>Position du QR</label>
-          <select id="qr-position">
-            <option value="bottom-center">Bas — centre</option>
-            <option value="bottom-right">Bas — droite</option>
-            <option value="bottom-left">Bas — gauche</option>
-            <option value="top-right">Haut — droite</option>
-            <option value="top-left">Haut — gauche</option>
-            <option value="top-center">Haut — centre</option>
-            <option value="center">Centre</option>
-          </select>
-        </div>
-
-        <div class="row">
           <label>Taille du QR</label>
           <div class="slider-row">
             <input type="range" id="qr-size" min="10" max="50" value="25" />
@@ -133,7 +120,7 @@
         </div>
 
         <div class="row">
-          <label>Marge depuis le bord</label>
+          <label>Marge depuis le bas</label>
           <div class="slider-row">
             <input type="range" id="qr-margin" min="0" max="15" value="5" />
             <div class="val" id="qr-margin-val">5%</div>
@@ -169,10 +156,12 @@
     let rectoImage = null;
     let versoImage = null;
 
+    // Fixed position: bottom-center
+    const QR_POSITION = 'bottom-center';
+
     // Live sliders
     const sizeSlider = document.getElementById('qr-size');
     const marginSlider = document.getElementById('qr-margin');
-    const positionSelect = document.getElementById('qr-position');
     sizeSlider.addEventListener('input', () => {
       document.getElementById('qr-size-val').textContent = sizeSlider.value + '%';
       updatePreview();
@@ -181,7 +170,6 @@
       document.getElementById('qr-margin-val').textContent = marginSlider.value + '%';
       updatePreview();
     });
-    positionSelect.addEventListener('change', updatePreview);
 
     // Image uploads
     document.getElementById('recto').addEventListener('change', async (e) => {
@@ -239,7 +227,7 @@
 
       ctx.drawImage(rectoImage, 0, 0, canvas.width, canvas.height);
 
-      const pos = positionSelect.value;
+      const pos = QR_POSITION;
       const sizePct = parseInt(sizeSlider.value) / 100;
       const marginPct = parseInt(marginSlider.value) / 100;
       const qrSize = canvas.width * sizePct;
@@ -320,7 +308,7 @@
       status.className = 'status';
 
       const zip = new JSZip();
-      const pos = positionSelect.value;
+      const pos = QR_POSITION;
       const sizePct = parseInt(sizeSlider.value) / 100;
       const marginPct = parseInt(marginSlider.value) / 100;
 
