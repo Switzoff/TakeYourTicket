@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animation Scan — Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center; }
+
+    canvas#particles { position: fixed; inset: 0; z-index: 0; }
+
+    .scene { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+    .holo-ring {
+      position: relative; width: 220px; height: 220px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .holo-ring::before, .holo-ring::after {
+      content: ''; position: absolute; border-radius: 50%;
+      animation: spin 3s linear infinite;
+    }
+    .holo-ring::before {
+      inset: -4px;
+      background: conic-gradient(from 0deg, #ff006680, #ff6b0080, #ffe60080, #00ff8880, #00b4ff80, #8b00ff80, #ff006680);
+      -webkit-mask: radial-gradient(transparent 48%, black 50%);
+      mask: radial-gradient(transparent 48%, black 50%);
+      filter: blur(2px);
+    }
+    .holo-ring::after {
+      inset: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .poster-wrap {
+      width: 180px; height: 180px; border-radius: 50%; overflow: hidden;
+      position: relative; z-index: 2;
+      animation: posterIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      animation-delay: 0.3s;
+      box-shadow: 0 0 60px rgba(255,255,255,0.1);
+    }
+    @keyframes posterIn {
+      from { transform: scale(0) rotate(-10deg); opacity: 0; }
+      to { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .poster-wrap img { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.2); }
+
+    .shimmer {
+      position: absolute; inset: 0; border-radius: 50%; z-index: 3;
+      background: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
+      background-size: 200% 200%;
+      animation: shimmer 2.5s ease-in-out infinite;
+      animation-delay: 0.9s;
+    }
+    @keyframes shimmer {
+      0% { background-position: -100% -100%; }
+      50% { background-position: 100% 100%; }
+      100% { background-position: -100% -100%; }
+    }
+
+    .flash {
+      position: fixed; inset: 0; background: white; z-index: 100;
+      animation: flash 0.5s ease-out both;
+      animation-delay: 0.1s;
+      pointer-events: none;
+    }
+    @keyframes flash {
+      0% { opacity: 0.7; }
+      100% { opacity: 0; }
+    }
+
+    .title-group {
+      text-align: center;
+      animation: fadeUp 0.6s ease both;
+      animation-delay: 0.7s;
+    }
+    .title-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #ffffff60; margin-bottom: 6px; }
+    .film-title { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+    .holo-tag {
+      display: inline-block; margin-top: 6px;
+      border: 1px solid #ffffff40; border-radius: 20px; padding: 3px 12px;
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #ffffff80;
+      background: rgba(255,255,255,0.05);
+      animation: pulse 2s ease-in-out infinite;
+      animation-delay: 1.5s;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+    .added-msg {
+      font-size: 13px; color: #4caf50; letter-spacing: 1px;
+      animation: fadeUp 0.5s ease both;
+      animation-delay: 1.1s;
+    }
+    @keyframes fadeUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .btn {
+      margin-top: 8px; padding: 14px 32px; border-radius: 40px;
+      background: #fff; color: #000; border: none; font-size: 14px; font-weight: 600; cursor: pointer;
+      animation: fadeUp 0.5s ease both;
+      animation-delay: 1.4s;
+    }
+
+    .replay {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      font-size: 12px; color: #ffffff40; cursor: pointer; letter-spacing: 1px;
+      text-transform: uppercase; border: none; background: transparent; color: #ffffff40;
+    }
+    .replay:hover { color: #fff; }
+  </style>
+</head>
+<body>
+  <canvas id="particles"></canvas>
+  <div class="flash"></div>
+
+  <div class="scene">
+    <div class="holo-ring">
+      <div class="poster-wrap">
+        <img id="poster" src="https://image.tmdb.org/t/p/original/38oHCHkELANKiqoLzWFxnJFNh4P.jpg" alt="Spider-Man">
+        <div class="shimmer"></div>
+      </div>
+    </div>
+
+    <div class="title-group">
+      <div class="title-label">Ticket collector</div>
+      <div class="film-title">Spider-Man</div>
+      <div class="holo-tag">✦ Holo</div>
+    </div>
+
+    <div class="added-msg">✓ Ajouté à ta collection</div>
+    <button class="btn" onclick="window.location='/'">Voir ma collection</button>
+  </div>
+
+  <button class="replay" onclick="location.reload()">↺ Revoir l'animation</button>
+
+  <script>
+    const canvas = document.getElementById('particles');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const COLORS = ['#ff0066', '#ff6b00', '#ffe600', '#00ff88', '#00b4ff', '#8b00ff', '#ffffff'];
+
+    for (let i = 0; i < 80; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: canvas.height + Math.random() * 200,
+        r: Math.random() * 2.5 + 0.5,
+        speed: Math.random() * 1.5 + 0.5,
+        drift: (Math.random() - 0.5) * 0.8,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        alpha: Math.random() * 0.6 + 0.2,
+        delay: Math.random() * 120
+      });
+    }
+
+    function animate(frame) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const p of particles) {
+        if (frame < p.delay) continue;
+        p.y -= p.speed;
+        p.x += p.drift;
+        p.alpha -= 0.002;
+        if (p.y < -10 || p.alpha <= 0) {
+          p.y = canvas.height + 10;
+          p.x = Math.random() * canvas.width;
+          p.alpha = Math.random() * 0.6 + 0.2;
+        }
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      requestAnimationFrame((f) => animate(frame + 1));
+    }
+    animate(0);
+  </script>
+</body>
+</html>
