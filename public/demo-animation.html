@@ -6,123 +6,113 @@
   <title>Animation Scan — Demo</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center; }
+    body { background: #060005; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center; }
 
-    canvas#particles { position: fixed; inset: 0; z-index: 0; }
-
-    .scene { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-
-    .holo-ring {
-      position: relative; width: 220px; height: 220px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .holo-ring::before, .holo-ring::after {
-      content: ''; position: absolute; border-radius: 50%;
-      animation: spin 3s linear infinite;
-    }
-    .holo-ring::before {
-      inset: -4px;
-      background: conic-gradient(from 0deg, #ff006680, #ff6b0080, #ffe60080, #00ff8880, #00b4ff80, #8b00ff80, #ff006680);
-      -webkit-mask: radial-gradient(transparent 48%, black 50%);
-      mask: radial-gradient(transparent 48%, black 50%);
-      filter: blur(2px);
-    }
-    .holo-ring::after {
-      inset: 8px;
-      border: 1px solid rgba(255,255,255,0.15);
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .poster-wrap {
-      width: 180px; height: 180px; border-radius: 50%; overflow: hidden;
-      position: relative; z-index: 2;
-      animation: posterIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-      animation-delay: 0.3s;
-      box-shadow: 0 0 60px rgba(255,255,255,0.1);
-    }
-    @keyframes posterIn {
-      from { transform: scale(0) rotate(-10deg); opacity: 0; }
-      to { transform: scale(1) rotate(0deg); opacity: 1; }
-    }
-    .poster-wrap img { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.2); }
-
-    .shimmer {
-      position: absolute; inset: 0; border-radius: 50%; z-index: 3;
-      background: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
-      background-size: 200% 200%;
-      animation: shimmer 2.5s ease-in-out infinite;
-      animation-delay: 0.9s;
-    }
-    @keyframes shimmer {
-      0% { background-position: -100% -100%; }
-      50% { background-position: 100% 100%; }
-      100% { background-position: -100% -100%; }
-    }
+    canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 
     .flash {
       position: fixed; inset: 0; background: white; z-index: 100;
       animation: flash 0.5s ease-out both;
-      animation-delay: 0.1s;
       pointer-events: none;
     }
-    @keyframes flash {
-      0% { opacity: 0.7; }
-      100% { opacity: 0; }
+    @keyframes flash { 0% { opacity: 0.8; } 100% { opacity: 0; } }
+
+    .scene {
+      position: relative; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
     }
+
+    .ticket-wrap {
+      width: 160px; height: 220px;
+      border-radius: 14px; overflow: hidden;
+      position: relative;
+      animation: cardIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      animation-delay: 0.35s;
+      box-shadow: 0 0 40px rgba(180, 0, 0, 0.4), 0 0 80px rgba(0, 50, 180, 0.25), 0 8px 32px rgba(0,0,0,0.7);
+    }
+    @keyframes cardIn {
+      from { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+      to   { transform: scale(1)   rotate(0deg);  opacity: 1; }
+    }
+    .ticket-wrap img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .ticket-placeholder {
+      width: 100%; height: 100%; background: #111;
+      display: flex; align-items: center; justify-content: center; font-size: 52px;
+    }
+
+    /* Reflet animé sur le ticket */
+    .ticket-sheen {
+      position: absolute; inset: 0; border-radius: 14px;
+      background: linear-gradient(125deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%);
+      background-size: 200% 200%;
+      animation: sheen 3s ease-in-out infinite; animation-delay: 1.2s;
+      pointer-events: none;
+    }
+    @keyframes sheen {
+      0%   { background-position: -100% -100%; }
+      50%  { background-position:  120%  120%; }
+      100% { background-position: -100% -100%; }
+    }
+
+    /* Bordure rouge/bleue qui pulse */
+    .ticket-border {
+      position: absolute; inset: -2px; border-radius: 16px;
+      background: conic-gradient(from 0deg, #cc000090, #003ca090, #ffffff40, #cc000090);
+      animation: borderSpin 4s linear infinite;
+      z-index: -1;
+    }
+    @keyframes borderSpin { to { transform: rotate(360deg); } }
 
     .title-group {
       text-align: center;
-      animation: fadeUp 0.6s ease both;
-      animation-delay: 0.7s;
+      animation: fadeUp 0.6s ease both; animation-delay: 0.8s;
     }
-    .title-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #ffffff60; margin-bottom: 6px; }
-    .film-title { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+    .title-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+    .film-title  { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
     .holo-tag {
       display: inline-block; margin-top: 6px;
-      border: 1px solid #ffffff40; border-radius: 20px; padding: 3px 12px;
-      font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #ffffff80;
-      background: rgba(255,255,255,0.05);
-      animation: pulse 2s ease-in-out infinite;
-      animation-delay: 1.5s;
+      border: 1px solid rgba(255,255,255,0.25); border-radius: 20px;
+      padding: 3px 12px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05);
+      animation: pulse 2s ease-in-out infinite; animation-delay: 1.5s;
     }
-    @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
 
     .added-msg {
       font-size: 13px; color: #4caf50; letter-spacing: 1px;
-      animation: fadeUp 0.5s ease both;
-      animation-delay: 1.1s;
+      animation: fadeUp 0.5s ease both; animation-delay: 1.1s;
     }
     @keyframes fadeUp {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      from { transform: translateY(16px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
     }
 
     .btn {
-      margin-top: 8px; padding: 14px 32px; border-radius: 40px;
+      margin-top: 4px; padding: 13px 30px; border-radius: 40px;
       background: #fff; color: #000; border: none; font-size: 14px; font-weight: 600; cursor: pointer;
-      animation: fadeUp 0.5s ease both;
-      animation-delay: 1.4s;
+      animation: fadeUp 0.5s ease both; animation-delay: 1.4s;
     }
 
     .replay {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      font-size: 12px; color: #ffffff40; cursor: pointer; letter-spacing: 1px;
-      text-transform: uppercase; border: none; background: transparent; color: #ffffff40;
+      font-size: 12px; color: rgba(255,255,255,0.3); cursor: pointer; letter-spacing: 1px;
+      text-transform: uppercase; border: none; background: transparent;
     }
     .replay:hover { color: #fff; }
   </style>
 </head>
 <body>
-  <canvas id="particles"></canvas>
+  <canvas id="canvas"></canvas>
   <div class="flash"></div>
 
   <div class="scene">
-    <div class="holo-ring">
-      <div class="poster-wrap">
-        <img id="poster" src="" alt="Spider-Man Brand New Day" style="display:none">
-        <div id="placeholder" style="width:100%;height:100%;background:#111;display:flex;align-items:center;justify-content:center;font-size:64px">🎬</div>
-        <div class="shimmer"></div>
-      </div>
+    <div class="ticket-border"></div>
+    <div class="ticket-wrap">
+      <img id="poster" src="" alt="Spider-Man Brand New Day" style="display:none">
+      <div class="ticket-placeholder" id="placeholder">🎬</div>
+      <div class="ticket-sheen"></div>
     </div>
 
     <div class="title-group">
@@ -138,56 +128,114 @@
   <button class="replay" onclick="location.reload()">↺ Revoir l'animation</button>
 
   <script>
-    const canvas = document.getElementById('particles');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
+    // ── CANVAS ──────────────────────────────────────────────────────────────
+    const canvas = document.getElementById('canvas');
+    const ctx    = canvas.getContext('2d');
+    canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
+    const W = canvas.width, H = canvas.height, CX = W/2, CY = H/2;
 
-    const particles = [];
-    const COLORS = ['#ff0066', '#ff6b00', '#ffe600', '#00ff88', '#00b4ff', '#8b00ff', '#ffffff'];
+    // ── ANIMATION TOILE SPIDER-MAN ───────────────────────────────────────────
+    const SPOKES = 22;
+    const RINGS  = [55, 108, 168, 234, 307, 387, 475, 572];
+    const angles = Array.from({length:SPOKES}, (_,i) => (i/SPOKES)*Math.PI*2 - Math.PI/2);
 
-    for (let i = 0; i < 80; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: canvas.height + Math.random() * 200,
-        r: Math.random() * 2.5 + 0.5,
-        speed: Math.random() * 1.5 + 0.5,
-        drift: (Math.random() - 0.5) * 0.8,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        alpha: Math.random() * 0.6 + 0.2,
-        delay: Math.random() * 120
-      });
+    function edgeDist(a) {
+      const ca = Math.abs(Math.cos(a)), sa = Math.abs(Math.sin(a));
+      const fw = ca < 0.001 ? Infinity : (Math.cos(a) > 0 ? W-CX : CX) / ca;
+      const fh = sa < 0.001 ? Infinity : (Math.sin(a) > 0 ? H-CY : CY) / sa;
+      return Math.min(fw, fh) * 1.08;
     }
 
-    function animate(frame) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const p of particles) {
-        if (frame < p.delay) continue;
-        p.y -= p.speed;
-        p.x += p.drift;
-        p.alpha -= 0.002;
-        if (p.y < -10 || p.alpha <= 0) {
-          p.y = canvas.height + 10;
-          p.x = Math.random() * canvas.width;
-          p.alpha = Math.random() * 0.6 + 0.2;
-        }
-        ctx.globalAlpha = p.alpha;
-        ctx.fillStyle = p.color;
+    const spokeP = new Float32Array(SPOKES);
+    const ringP  = new Float32Array(RINGS.length);
+
+    // Particules rouge/bleu
+    const pts = Array.from({length:85}, () => ({
+      x: Math.random()*W, y: H + Math.random()*150,
+      r: Math.random()*2+0.5,
+      vy: Math.random()*1.4+0.8, vx: (Math.random()-0.5)*1.5,
+      c: Math.random() > 0.5 ? '#dd0000' : '#4455ff',
+      a: Math.random()*0.5+0.2,
+    }));
+
+    let frame = 0;
+
+    function loop() {
+      ctx.clearRect(0, 0, W, H);
+
+      // Lueur rouge centrale
+      const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.min(W,H)*0.55);
+      g.addColorStop(0, 'rgba(180,0,0,0.13)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+      // Avancer les rayons
+      for (let i=0; i<SPOKES; i++) {
+        if (frame >= i*2) spokeP[i] = Math.min(1, (frame - i*2) / 28);
+      }
+      // Avancer les anneaux
+      const ringStart = SPOKES*2 + 12;
+      for (let i=0; i<RINGS.length; i++) {
+        const sf = ringStart + i*11;
+        if (frame >= sf) ringP[i] = Math.min(1, (frame - sf) / 32);
+      }
+
+      // Dessiner les rayons
+      ctx.lineWidth = 0.7;
+      for (let i=0; i<SPOKES; i++) {
+        if (spokeP[i] <= 0) continue;
+        const len = edgeDist(angles[i]) * spokeP[i];
+        ctx.strokeStyle = `rgba(200,210,255,${0.45 * spokeP[i]})`;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(CX, CY);
+        ctx.lineTo(CX + Math.cos(angles[i])*len, CY + Math.sin(angles[i])*len);
+        ctx.stroke();
+      }
+
+      // Dessiner les anneaux
+      ctx.lineWidth = 0.55;
+      for (let ri=0; ri<RINGS.length; ri++) {
+        if (ringP[ri] <= 0) continue;
+        const r = RINGS[ri], alpha = Math.min(0.45, ringP[ri]*0.9);
+        ctx.strokeStyle = `rgba(200,215,255,${alpha})`;
+        const segs = Math.floor(SPOKES * ringP[ri]);
+        ctx.beginPath();
+        for (let i=0; i<=segs; i++) {
+          const ai = i % SPOKES;
+          if (r > edgeDist(angles[ai])) continue;
+          const px = CX + Math.cos(angles[ai])*r;
+          const py = CY + Math.sin(angles[ai])*r;
+          i===0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        if (ringP[ri] >= 1 && r <= edgeDist(angles[0])) {
+          ctx.lineTo(CX + Math.cos(angles[0])*r, CY + Math.sin(angles[0])*r);
+        }
+        ctx.stroke();
+      }
+
+      // Particules
+      for (const p of pts) {
+        p.y -= p.vy; p.x += p.vx; p.a -= 0.0012;
+        if (p.y < -10 || p.a <= 0) { p.y = H+10; p.x = Math.random()*W; p.a = Math.random()*0.5+0.2; }
+        ctx.globalAlpha = p.a; ctx.fillStyle = p.c;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
       }
       ctx.globalAlpha = 1;
-      requestAnimationFrame((f) => animate(frame + 1));
+      frame++;
+      requestAnimationFrame(loop);
     }
-    animate(0);
+    loop();
 
+    // ── CHARGER L'AFFICHE ────────────────────────────────────────────────────
     fetch('/api/affiche/Spider-Man%20Brand%20New%20Day')
       .then(r => r.json())
       .then(d => {
         if (d.affiche) {
           const img = document.getElementById('poster');
-          img.onload = () => { img.style.display = 'block'; document.getElementById('placeholder').style.display = 'none'; };
+          img.onload = () => {
+            img.style.display = 'block';
+            document.getElementById('placeholder').style.display = 'none';
+          };
           img.src = d.affiche;
         }
       }).catch(() => {});
