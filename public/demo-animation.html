@@ -56,15 +56,6 @@
       100% { background-position: -100% -100%; }
     }
 
-    /* Bordure rouge/bleue qui pulse */
-    .ticket-border {
-      position: absolute; inset: -2px; border-radius: 16px;
-      background: conic-gradient(from 0deg, #cc000090, #003ca090, #ffffff40, #cc000090);
-      animation: borderSpin 4s linear infinite;
-      z-index: -1;
-    }
-    @keyframes borderSpin { to { transform: rotate(360deg); } }
-
     .title-group {
       text-align: center;
       animation: fadeUp 0.6s ease both; animation-delay: 0.8s;
@@ -108,7 +99,6 @@
   <div class="flash"></div>
 
   <div class="scene">
-    <div class="ticket-border"></div>
     <div class="ticket-wrap">
       <img id="poster" src="" alt="Spider-Man Brand New Day" style="display:none">
       <div class="ticket-placeholder" id="placeholder">🎬</div>
