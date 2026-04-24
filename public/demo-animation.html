@@ -286,6 +286,18 @@
     }
 
     function drawRadialWeb(f) {
+      // Centrer la toile sur la carte (pas sur le milieu du canvas)
+      const rect = cardEl.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      function edgeDistFrom(a, px, py) {
+        const ca = Math.abs(Math.cos(a)), sa = Math.abs(Math.sin(a));
+        const fw = ca < 0.001 ? Infinity : (Math.cos(a) > 0 ? W-px : px) / ca;
+        const fh = sa < 0.001 ? Infinity : (Math.sin(a) > 0 ? H-py : py) / sa;
+        return Math.min(fw, fh) * 1.08;
+      }
+
       for (let i = 0; i < SPOKES; i++) {
         const sf = SPOKES_START + i * 2;
         if (f >= sf) spokeP[i] = Math.min(1, (f - sf) / 24);
@@ -298,11 +310,11 @@
       ctx.lineWidth = 0.7;
       for (let i = 0; i < SPOKES; i++) {
         if (spokeP[i] <= 0) continue;
-        const len = edgeDist(angles[i]) * spokeP[i];
+        const len = edgeDistFrom(angles[i], cx, cy) * spokeP[i];
         ctx.strokeStyle = `rgba(200, 210, 255, ${0.38 * spokeP[i]})`;
         ctx.beginPath();
-        ctx.moveTo(CX, CY);
-        ctx.lineTo(CX + Math.cos(angles[i])*len, CY + Math.sin(angles[i])*len);
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(angles[i])*len, cy + Math.sin(angles[i])*len);
         ctx.stroke();
       }
 
@@ -315,13 +327,13 @@
         ctx.beginPath();
         for (let i = 0; i <= segs; i++) {
           const ai = i % SPOKES;
-          if (r > edgeDist(angles[ai])) continue;
-          const px = CX + Math.cos(angles[ai])*r;
-          const py = CY + Math.sin(angles[ai])*r;
+          if (r > edgeDistFrom(angles[ai], cx, cy)) continue;
+          const px = cx + Math.cos(angles[ai])*r;
+          const py = cy + Math.sin(angles[ai])*r;
           i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
         }
-        if (ringP[ri] >= 1 && r <= edgeDist(angles[0])) {
-          ctx.lineTo(CX + Math.cos(angles[0])*r, CY + Math.sin(angles[0])*r);
+        if (ringP[ri] >= 1 && r <= edgeDistFrom(angles[0], cx, cy)) {
+          ctx.lineTo(cx + Math.cos(angles[0])*r, cy + Math.sin(angles[0])*r);
         }
         ctx.stroke();
       }
