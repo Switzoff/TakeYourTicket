@@ -130,9 +130,17 @@
     // ── CANVAS ──────────────────────────────────────────────────────────────
     const canvas = document.getElementById('canvas');
     const ctx    = canvas.getContext('2d');
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const W = canvas.width, H = canvas.height, CX = W/2, CY = H/2;
+    let W, H, CX, CY;
+    function resizeCanvas() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+      CX = W/2; CY = H/2;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', resizeCanvas);
 
     const cardEl = document.getElementById('card');
 
