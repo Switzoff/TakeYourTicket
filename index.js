@@ -94,8 +94,19 @@ app.get('/api/collections', async (req, res) => {
   const { uid } = req.query;
   if (!uid) return res.json([]);
   const snapshot = await db.collection('collections').where('uid', '==', uid).get();
-  const tickets = snapshot.docs.map(doc => doc.data());
+  const tickets = snapshot.docs.map(doc => ({ ...doc.data(), docId: doc.id }));
   res.json(tickets);
+});
+
+app.delete('/api/collections/:docId', async (req, res) => {
+  const { docId } = req.params;
+  const { uid } = req.query;
+  if (!uid) return res.status(400).json({ error: 'uid requis' });
+  const doc = await db.collection('collections').doc(docId).get();
+  if (!doc.exists) return res.status(404).json({ error: 'Introuvable' });
+  if (doc.data().uid !== uid) return res.status(403).json({ error: 'Interdit' });
+  await db.collection('collections').doc(docId).delete();
+  res.json({ success: true });
 });
 
 app.get('/scan-page/:id', (req, res) => {
