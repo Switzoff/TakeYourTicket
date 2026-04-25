@@ -344,14 +344,13 @@
         ctx.strokeStyle=`rgba(200,215,255,${alpha})`;
         const segs = Math.floor(SPOKES*ringP[ri]);
         ctx.beginPath();
+        let needsMove = true;
         for (let i=0;i<=segs;i++) {
           const ai = i%SPOKES;
-          if (r > edgeDistFrom(angles[ai], cx, cy)) continue;
+          if (r > edgeDistFrom(angles[ai], cx, cy)) { needsMove = true; continue; }
           const px = cx+Math.cos(angles[ai])*r, py = cy+Math.sin(angles[ai])*r;
-          i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
-        }
-        if (ringP[ri]>=1 && r<=edgeDistFrom(angles[0], cx, cy)) {
-          ctx.lineTo(cx+Math.cos(angles[0])*r, cy+Math.sin(angles[0])*r);
+          if (needsMove) { ctx.moveTo(px, py); needsMove = false; }
+          else ctx.lineTo(px, py);
         }
         ctx.stroke();
       }
