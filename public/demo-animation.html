@@ -8,7 +8,8 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #050408; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center; }
 
-    canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    #canvas    { position: fixed; inset: 0; z-index: 0;  pointer-events: none; }
+    #canvas-fg { position: fixed; inset: 0; z-index: 15; pointer-events: none; }
 
     .flash {
       position: fixed; inset: 0; background: white; z-index: 100;
@@ -108,6 +109,7 @@
 </head>
 <body>
   <canvas id="canvas"></canvas>
+  <canvas id="canvas-fg"></canvas>
   <div class="flash"></div>
 
   <div class="scene">
@@ -133,12 +135,17 @@
     // ── CANVAS ──────────────────────────────────────────────────────────────
     const canvas = document.getElementById('canvas');
     const ctx    = canvas.getContext('2d');
+    // Canvas avant-plan (au-dessus de la carte) pour les doigts qui agrippent
+    const canvasFg = document.getElementById('canvas-fg');
+    const ctxFg    = canvasFg.getContext('2d');
     let W, H, CX, CY;
     function resizeCanvas() {
       W = window.innerWidth;
       H = window.innerHeight;
       canvas.width = W;
       canvas.height = H;
+      canvasFg.width = W;
+      canvasFg.height = H;
       CX = W/2; CY = H/2;
     }
     resizeCanvas();
@@ -232,8 +239,9 @@
       }
     }
 
-    // ── POINTE QUI AGRIPPE LA CARTE (doigts) ────────────────────────────────
+    // ── POINTE QUI AGRIPPE LA CARTE (dessinée AU-DESSUS de la carte) ─────────
     function drawSplay(tipX, tipY) {
+      ctxFg.clearRect(0, 0, W, H);
       if (tipY < -10) return;
 
       const FINGERS = 7;
@@ -250,9 +258,9 @@
         { lenFactor: 0.92, curve: -2 },
       ];
 
-      ctx.strokeStyle = 'rgba(240, 248, 255, 0.85)';
-      ctx.lineWidth = 1.2;
-      ctx.lineCap = 'round';
+      ctxFg.strokeStyle = 'rgba(240, 248, 255, 0.95)';
+      ctxFg.lineWidth = 1.6;
+      ctxFg.lineCap = 'round';
 
       for (let i = 0; i < FINGERS; i++) {
         const t = i / (FINGERS - 1);
@@ -263,26 +271,26 @@
         const mx = tipX + Math.cos(angle) * L * 0.55 + fingers[i].curve;
         const my = tipY + Math.sin(angle) * L * 0.55;
 
-        ctx.beginPath();
-        ctx.moveTo(tipX, tipY);
-        ctx.quadraticCurveTo(mx, my, ex, ey);
-        ctx.stroke();
+        ctxFg.beginPath();
+        ctxFg.moveTo(tipX, tipY);
+        ctxFg.quadraticCurveTo(mx, my, ex, ey);
+        ctxFg.stroke();
       }
 
-      // Fibres transversales (filet)
-      ctx.strokeStyle = 'rgba(220, 235, 255, 0.35)';
-      ctx.lineWidth = 0.5;
+      // Fibres transversales (filet) — bien visibles devant la carte
+      ctxFg.strokeStyle = 'rgba(220, 235, 255, 0.55)';
+      ctxFg.lineWidth = 0.7;
       for (let ring = 0; ring < 3; ring++) {
         const r = maxLen * (0.4 + ring * 0.2);
-        ctx.beginPath();
+        ctxFg.beginPath();
         for (let i = 0; i < FINGERS; i++) {
           const t = i / (FINGERS - 1);
           const angle = Math.PI/2 + (t - 0.5) * spread;
           const x = tipX + Math.cos(angle) * r;
           const y = tipY + Math.sin(angle) * r;
-          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          i === 0 ? ctxFg.moveTo(x, y) : ctxFg.lineTo(x, y);
         }
-        ctx.stroke();
+        ctxFg.stroke();
       }
     }
 
