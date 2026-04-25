@@ -25,12 +25,15 @@
 
     .scene {
       position: relative; z-index: 10;
-      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      display: flex; flex-direction: column; align-items: center;
+      gap: clamp(16px, 3vh, 24px);
+      padding: 0 16px;
     }
 
     .ticket-wrap {
-      width: 160px; height: 220px;
-      border-radius: 14px; overflow: hidden;
+      width: clamp(180px, 55vmin, 260px);
+      aspect-ratio: 160 / 220;
+      border-radius: clamp(14px, 2.5vmin, 18px); overflow: hidden;
       position: relative;
       box-shadow: 0 0 40px rgba(180,0,0,0.0), 0 8px 32px rgba(0,0,0,0.7);
       transform-origin: top center;
@@ -87,12 +90,12 @@
     }
     [data-theme-root="spiderman"] .title-group { animation-delay: 1.7s; }
 
-    .title-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
-    .film-title  { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+    .title-label { font-size: clamp(10px, 1.4vmin, 12px); letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+    .film-title  { font-size: clamp(20px, 3vmin, 26px); font-weight: 700; letter-spacing: 0.5px; line-height: 1.2; }
     .holo-tag {
-      display: inline-block; margin-top: 6px;
+      display: inline-block; margin-top: 8px;
       border: 1px solid rgba(255,255,255,0.25); border-radius: 20px;
-      padding: 3px 12px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 4px 14px; font-size: clamp(10px, 1.3vmin, 11px); letter-spacing: 2px; text-transform: uppercase;
       color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05);
       animation: pulse 2s ease-in-out infinite; animation-delay: 1.7s;
     }
@@ -100,7 +103,7 @@
     @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
 
     .added-msg {
-      font-size: 13px; color: #4caf50; letter-spacing: 1px;
+      font-size: clamp(13px, 1.7vmin, 15px); color: #4caf50; letter-spacing: 1px;
       animation: fadeUp 0.5s ease both; animation-delay: 1.4s;
     }
     [data-theme-root="spiderman"] .added-msg { animation-delay: 2s; }
@@ -223,7 +226,9 @@
 
     const SPOKES_START = 100;
     const SPOKES = 22;
-    const RINGS  = [55,108,168,234,307,387,475,572];
+    // Anneaux proportionnels à la taille de l'écran (vmin = plus petite dimension)
+    const VMIN = Math.min(W, H);
+    const RINGS = [0.07, 0.14, 0.22, 0.30, 0.40, 0.50, 0.62, 0.75].map(p => p * VMIN);
     const RINGS_START = SPOKES_START + SPOKES*2 + 8;
     const angles = Array.from({length:SPOKES}, (_,i)=>(i/SPOKES)*Math.PI*2 - Math.PI/2);
     const spokeP = new Float32Array(SPOKES);
@@ -238,15 +243,20 @@
 
     function drawStrand(tipX, tipY, f) {
       if (tipY < -20) return;
+      // Épaisseurs proportionnelles
+      const wGlow = Math.max(8, VMIN * 0.022);
+      const wMain = Math.max(3.2, VMIN * 0.009);
+      const wCore = Math.max(1.2, VMIN * 0.0035);
+
       const glow = ctx.createLinearGradient(tipX,-30,tipX,tipY);
       glow.addColorStop(0,'rgba(180,220,255,0.22)'); glow.addColorStop(1,'rgba(180,220,255,0.12)');
-      ctx.strokeStyle=glow; ctx.lineWidth=8; ctx.lineCap='round';
+      ctx.strokeStyle=glow; ctx.lineWidth=wGlow; ctx.lineCap='round';
       ctx.beginPath(); ctx.moveTo(tipX,-30); ctx.lineTo(tipX,tipY); ctx.stroke();
 
-      ctx.strokeStyle='rgba(245,250,255,0.95)'; ctx.lineWidth=3.2;
+      ctx.strokeStyle='rgba(245,250,255,0.95)'; ctx.lineWidth=wMain;
       ctx.beginPath(); ctx.moveTo(tipX,-30); ctx.lineTo(tipX,tipY); ctx.stroke();
 
-      ctx.strokeStyle='rgba(255,255,255,1)'; ctx.lineWidth=1.2;
+      ctx.strokeStyle='rgba(255,255,255,1)'; ctx.lineWidth=wCore;
       ctx.beginPath(); ctx.moveTo(tipX,-30); ctx.lineTo(tipX,tipY); ctx.stroke();
 
       ctx.strokeStyle='rgba(220,235,255,0.35)'; ctx.lineWidth=0.6;
@@ -270,7 +280,7 @@
 
     function drawSplay(tipX, tipY) {
       if (tipY < -10) return;
-      const FINGERS = 7, spread = Math.PI*0.85, maxLen = 50;
+      const FINGERS = 7, spread = Math.PI*0.85, maxLen = Math.max(50, VMIN * 0.13);
       const fingers = [
         {L:0.95,c: 3},{L:0.80,c:-4},{L:1.00,c: 2},{L:0.70,c: 5},
         {L:0.88,c:-3},{L:0.75,c: 4},{L:0.92,c:-2},

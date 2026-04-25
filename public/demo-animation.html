@@ -19,13 +19,16 @@
 
     .scene {
       position: relative; z-index: 10;
-      display: flex; flex-direction: column; align-items: center; gap: 18px;
+      display: flex; flex-direction: column; align-items: center;
+      gap: clamp(16px, 3vh, 24px);
+      padding: 0 16px;
     }
 
     /* La carte descend du haut, suspendue à la toile */
     .ticket-wrap {
-      width: 160px; height: 220px;
-      border-radius: 14px; overflow: hidden;
+      width: clamp(180px, 55vmin, 260px);
+      aspect-ratio: 160 / 220;
+      border-radius: clamp(14px, 2.5vmin, 18px); overflow: hidden;
       position: relative;
       animation: webDrop 1.6s cubic-bezier(0.42, 0.05, 0.3, 1.25) both, dangle 3.5s ease-in-out infinite;
       animation-delay: 0s, 1.7s;
@@ -69,19 +72,19 @@
       text-align: center;
       animation: fadeUp 0.6s ease both; animation-delay: 1.7s;
     }
-    .title-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
-    .film-title  { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+    .title-label { font-size: clamp(10px, 1.4vmin, 12px); letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+    .film-title  { font-size: clamp(20px, 3vmin, 26px); font-weight: 700; letter-spacing: 0.5px; line-height: 1.2; }
     .holo-tag {
-      display: inline-block; margin-top: 6px;
+      display: inline-block; margin-top: 8px;
       border: 1px solid rgba(255,255,255,0.25); border-radius: 20px;
-      padding: 3px 12px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 4px 14px; font-size: clamp(10px, 1.3vmin, 11px); letter-spacing: 2px; text-transform: uppercase;
       color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05);
       animation: pulse 2s ease-in-out infinite; animation-delay: 2.3s;
     }
     @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
 
     .added-msg {
-      font-size: 13px; color: #4caf50; letter-spacing: 1px;
+      font-size: clamp(13px, 1.7vmin, 15px); color: #4caf50; letter-spacing: 1px;
       animation: fadeUp 0.5s ease both; animation-delay: 2s;
     }
     @keyframes fadeUp {
@@ -163,17 +166,21 @@
     // ── TIMING ──────────────────────────────────────────────────────────────
     const SPOKES_START = 100;  // ~1670ms, après que la carte soit posée
     const RINGS_START  = SPOKES_START + 22*2 + 8;
+    const VMIN = Math.min(W, H);
 
     // ── TOILE QUI RELIE LE HAUT À LA CARTE ──────────────────────────────────
     function drawWebStrand(tipX, tipY, f) {
       if (tipY < -20) return;
+      const wGlow = Math.max(8, VMIN * 0.022);
+      const wMain = Math.max(3.2, VMIN * 0.009);
+      const wCore = Math.max(1.2, VMIN * 0.0035);
 
       // Halo bleuté flou derrière
       const glow = ctx.createLinearGradient(tipX, -30, tipX, tipY);
       glow.addColorStop(0, 'rgba(180, 220, 255, 0.22)');
       glow.addColorStop(1, 'rgba(180, 220, 255, 0.12)');
       ctx.strokeStyle = glow;
-      ctx.lineWidth = 8;
+      ctx.lineWidth = wGlow;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(tipX, -30);
@@ -182,7 +189,7 @@
 
       // Corde blanche épaisse
       ctx.strokeStyle = 'rgba(245, 250, 255, 0.95)';
-      ctx.lineWidth = 3.2;
+      ctx.lineWidth = wMain;
       ctx.beginPath();
       ctx.moveTo(tipX, -30);
       ctx.lineTo(tipX, tipY);
@@ -190,7 +197,7 @@
 
       // Cœur brillant
       ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = wCore;
       ctx.beginPath();
       ctx.moveTo(tipX, -30);
       ctx.lineTo(tipX, tipY);
@@ -231,7 +238,7 @@
 
       const FINGERS = 7;
       const spread  = Math.PI * 0.85;
-      const maxLen  = 50;
+      const maxLen  = Math.max(50, VMIN * 0.13);
 
       const fingers = [
         { lenFactor: 0.95, curve:  3 },
@@ -281,7 +288,8 @@
 
     // ── TOILE RADIALE AUTOUR DE LA CARTE (après atterrissage) ───────────────
     const SPOKES = 22;
-    const RINGS  = [55, 108, 168, 234, 307, 387, 475, 572];
+    // Anneaux proportionnels à l'écran
+    const RINGS  = [0.07, 0.14, 0.22, 0.30, 0.40, 0.50, 0.62, 0.75].map(p => p * VMIN);
     const angles = Array.from({length:SPOKES}, (_,i) => (i/SPOKES)*Math.PI*2 - Math.PI/2);
     const spokeP = new Float32Array(SPOKES);
     const ringP  = new Float32Array(RINGS.length);
