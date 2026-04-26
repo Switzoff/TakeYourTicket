@@ -70,7 +70,6 @@
   <div class="stats">
     <div class="stat"><div class="val" id="total">0</div><div class="lbl">Films vus</div></div>
     <div class="stat"><div class="val" id="mois">0</div><div class="lbl">Ce mois</div></div>
-    <div class="stat"><div class="val" id="holos">0</div><div class="lbl">Holos</div></div>
   </div>
 
   <div class="section-title">Tickets récents</div>
@@ -125,7 +124,6 @@
       const grid = document.getElementById('grid');
       const totalEl = document.getElementById('total');
       const moisEl = document.getElementById('mois');
-      const holosEl = document.getElementById('holos');
 
       try {
         const res = await fetch(`/api/collections?uid=${uid}`);
@@ -139,7 +137,6 @@
           return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear();
         }).length;
         moisEl.textContent = ceMois;
-        holosEl.textContent = tickets.filter(t => t.holo).length;
 
         if (tickets.length === 0) {
           grid.innerHTML = '<div class="empty"><p>Scanne ton premier ticket !</p></div>';
