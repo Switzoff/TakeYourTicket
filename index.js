@@ -87,6 +87,25 @@ app.get('/api/affiche/:film', async (req, res) => {
     res.json({ affiche: null });
   }
 });
+
+app.get('/api/recherche-films', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (q.length < 2) return res.json([]);
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(q)}&language=fr-FR&page=1`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    const results = (data.results || []).slice(0, 12).map(r => ({
+      id: r.id,
+      title: r.title,
+      year: r.release_date ? String(r.release_date).slice(0, 4) : '',
+      poster: r.poster_path ? `https://image.tmdb.org/t/p/w185${r.poster_path}` : null,
+    }));
+    res.json(results);
+  } catch (e) {
+    res.json([]);
+  }
+});
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });

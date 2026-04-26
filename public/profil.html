@@ -142,6 +142,85 @@
     }
     .crop-btn.cancel { background: #2a2a2a; color: #fff; }
     .crop-btn.validate { background: #fff; color: #000; }
+
+    /* Modal de recherche de films TMDB */
+    .search-modal {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      display: none; flex-direction: column;
+      padding: env(safe-area-inset-top) 16px 16px;
+    }
+    .search-modal.active { display: flex; }
+    .search-card {
+      background: #111; border: 0.5px solid #2a2a2a; border-radius: 16px;
+      max-width: 460px; width: 100%; margin: 24px auto 0; padding: 14px;
+      flex: 1; display: flex; flex-direction: column; gap: 10px;
+      max-height: calc(100vh - 48px); overflow: hidden;
+    }
+    .search-header {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .search-header input {
+      flex: 1; background: #1d1d1d; border: 0.5px solid #2a2a2a;
+      color: #fff; font-size: 14px; padding: 12px 14px; border-radius: 10px;
+      outline: none;
+    }
+    .search-header input:focus { border-color: #555; }
+    .search-close {
+      background: #2a2a2a; border: none; color: #fff;
+      width: 38px; height: 38px; border-radius: 10px; cursor: pointer; font-size: 16px;
+    }
+    .search-results {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      overflow-y: auto; padding: 4px 2px 8px; flex: 1;
+    }
+    .search-empty {
+      grid-column: span 3; text-align: center; color: #555;
+      font-size: 12px; padding: 40px 20px;
+    }
+    .film-result {
+      background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 10px;
+      overflow: hidden; cursor: pointer; transition: transform 0.1s, border-color 0.15s;
+    }
+    .film-result:hover, .film-result:active { border-color: #555; transform: scale(0.98); }
+    .film-result .poster {
+      width: 100%; aspect-ratio: 2/3; background: #222;
+      display: flex; align-items: center; justify-content: center; font-size: 28px;
+    }
+    .film-result .poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .film-result .meta {
+      padding: 6px 8px 8px;
+    }
+    .film-result .meta .title {
+      font-size: 11px; font-weight: 600; line-height: 1.25;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .film-result .meta .year { color: #555; font-size: 10px; margin-top: 2px; }
+
+    /* Chip "film" avec affiche */
+    .chip-film {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #161616; border: 0.5px solid #2a2a2a;
+      border-radius: 10px; padding: 4px 8px 4px 4px;
+    }
+    .chip-film img {
+      width: 28px; height: 40px; border-radius: 4px; object-fit: cover; display: block;
+    }
+    .chip-film .placeholder {
+      width: 28px; height: 40px; border-radius: 4px; background: #222;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .chip-film .label {
+      font-size: 12px; color: #ddd; max-width: 130px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .chip-film .x {
+      cursor: pointer; color: #666; font-size: 14px; line-height: 1;
+      width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 50%; transition: color 0.15s, background 0.15s;
+    }
+    .chip-film .x:hover { color: #fff; background: rgba(220, 60, 60, 0.6); }
   </style>
 </head>
 <body>
@@ -180,6 +259,19 @@
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
       </svg>
     </button>
+  </div>
+
+  <!-- Modal de recherche de films TMDB -->
+  <div class="search-modal" id="search-modal">
+    <div class="search-card">
+      <div class="search-header">
+        <input type="text" id="search-input" placeholder="Tape le nom d'un film…" autocomplete="off">
+        <button class="search-close" onclick="closeSearchModal()">✕</button>
+      </div>
+      <div class="search-results" id="search-results">
+        <div class="search-empty">Tape pour chercher un film</div>
+      </div>
+    </div>
   </div>
 
   <!-- Modal de recadrage de photo de profil -->
@@ -246,14 +338,23 @@
 
     function renderChips() {
       const films = document.getElementById('films-chips');
-      films.innerHTML = profile.favoriteFilms.map((f, i) =>
-        `<span class="chip">${escapeHtml(f)}<span class="x" onclick="removeFilm(${i})">✕</span></span>`
-      ).join('') + `<button class="add-btn" onclick="addFilm()">+ Ajouter</button>`;
+      films.innerHTML = profile.favoriteFilms.map((f, i) => {
+        const poster = f.poster
+          ? `<img src="${escapeHtml(f.poster)}" alt="">`
+          : `<div class="placeholder">🎬</div>`;
+        return `<span class="chip-film">${poster}<span class="label">${escapeHtml(f.title)}</span><span class="x" onclick="removeFilm(${i})">✕</span></span>`;
+      }).join('') + `<button class="add-btn" onclick="openSearchModal()">+ Ajouter</button>`;
 
       const actors = document.getElementById('actors-chips');
       actors.innerHTML = profile.favoriteActors.map((a, i) =>
         `<span class="chip">${escapeHtml(a)}<span class="x" onclick="removeActor(${i})">✕</span></span>`
       ).join('') + `<button class="add-btn" onclick="addActor()">+ Ajouter</button>`;
+    }
+
+    function normalizeFilm(f) {
+      // Compat avec l'ancien format (string)
+      if (typeof f === 'string') return { title: f, poster: null };
+      return { title: f.title || '', poster: f.poster || null };
     }
 
     async function loadProfile() {
@@ -263,7 +364,7 @@
         profile = {
           displayName: d.displayName ?? user.displayName ?? '',
           photoURL: d.photoURL ?? user.photoURL ?? '',
-          favoriteFilms: d.favoriteFilms ?? [],
+          favoriteFilms: (d.favoriteFilms ?? []).map(normalizeFilm),
           favoriteActors: d.favoriteActors ?? [],
         };
       } catch (e) {
@@ -437,13 +538,73 @@
       }
     }, { passive: false });
 
-    // Films / Actors
-    async function addFilm() {
-      const name = prompt('Nom du film préféré ?');
-      if (!name || !name.trim()) return;
-      profile.favoriteFilms.push(name.trim());
-      renderChips(); await saveProfile();
+    // ── RECHERCHE TMDB DE FILMS ──────────────────────────────────────────
+    const searchModal  = document.getElementById('search-modal');
+    const searchInput  = document.getElementById('search-input');
+    const searchResults= document.getElementById('search-results');
+    let searchTimer = null;
+
+    function openSearchModal() {
+      searchInput.value = '';
+      searchResults.innerHTML = `<div class="search-empty">Tape pour chercher un film</div>`;
+      searchModal.classList.add('active');
+      setTimeout(() => searchInput.focus(), 50);
     }
+    function closeSearchModal() {
+      searchModal.classList.remove('active');
+    }
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      clearTimeout(searchTimer);
+      if (q.length < 2) {
+        searchResults.innerHTML = `<div class="search-empty">Tape pour chercher un film</div>`;
+        return;
+      }
+      searchTimer = setTimeout(() => doSearch(q), 280);
+    });
+
+    async function doSearch(q) {
+      searchResults.innerHTML = `<div class="search-empty">Recherche…</div>`;
+      try {
+        const r = await fetch(`/api/recherche-films?q=${encodeURIComponent(q)}`);
+        const list = await r.json();
+        if (!list.length) {
+          searchResults.innerHTML = `<div class="search-empty">Aucun résultat</div>`;
+          return;
+        }
+        searchResults.innerHTML = list.map((f, i) => {
+          const poster = f.poster
+            ? `<img src="${escapeHtml(f.poster)}" alt="" loading="lazy">`
+            : `🎬`;
+          return `
+            <div class="film-result" data-index="${i}">
+              <div class="poster">${poster}</div>
+              <div class="meta">
+                <div class="title">${escapeHtml(f.title)}</div>
+                <div class="year">${escapeHtml(f.year)}</div>
+              </div>
+            </div>`;
+        }).join('');
+        // Click -> ajout
+        searchResults.querySelectorAll('.film-result').forEach((el) => {
+          el.addEventListener('click', () => {
+            const idx = parseInt(el.dataset.index, 10);
+            pickFilm(list[idx]);
+          });
+        });
+      } catch (e) {
+        searchResults.innerHTML = `<div class="search-empty">Erreur de recherche</div>`;
+      }
+    }
+
+    async function pickFilm(film) {
+      profile.favoriteFilms.push({ title: film.title, poster: film.poster });
+      renderChips();
+      closeSearchModal();
+      await saveProfile();
+    }
+
     async function removeFilm(i) {
       profile.favoriteFilms.splice(i, 1);
       renderChips(); await saveProfile();
