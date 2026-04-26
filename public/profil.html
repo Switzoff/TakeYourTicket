@@ -87,6 +87,61 @@
     }
     .nav-item.active { color: #fff; }
     .nav-item svg { width: 22px; height: 22px; }
+
+    /* Modal de recadrage de photo */
+    .crop-modal {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .crop-modal.active { display: flex; }
+    .crop-card {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 16px;
+      padding: 20px; max-width: 360px; width: 100%;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .crop-title { font-size: 14px; font-weight: 600; text-align: center; color: #fff; }
+    .crop-hint  { font-size: 11px; text-align: center; color: #666; margin-top: -10px; }
+    .crop-frame {
+      position: relative; width: 280px; height: 280px; max-width: 100%;
+      aspect-ratio: 1; margin: 0 auto;
+      background: #000; overflow: hidden; border-radius: 12px;
+      touch-action: none; user-select: none; cursor: grab;
+    }
+    .crop-frame:active { cursor: grabbing; }
+    .crop-frame img {
+      position: absolute; left: 50%; top: 50%;
+      pointer-events: none; user-select: none;
+      max-width: none; max-height: none;
+    }
+    .crop-mask {
+      position: absolute; inset: 0; pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .crop-controls { display: flex; align-items: center; gap: 12px; }
+    .crop-controls input[type=range] {
+      flex: 1; -webkit-appearance: none; appearance: none;
+      height: 3px; background: #333; border-radius: 2px; outline: none;
+    }
+    .crop-controls input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px; border-radius: 50%; background: #fff; cursor: pointer;
+    }
+    .crop-controls input[type=range]::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%; background: #fff;
+      border: none; cursor: pointer;
+    }
+    .crop-icon { color: #888; font-size: 18px; line-height: 1; user-select: none; }
+    .crop-actions { display: flex; gap: 8px; }
+    .crop-btn {
+      flex: 1; padding: 12px; border-radius: 10px; border: none;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+    .crop-btn.cancel { background: #2a2a2a; color: #fff; }
+    .crop-btn.validate { background: #fff; color: #000; }
   </style>
 </head>
 <body>
@@ -125,6 +180,27 @@
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
       </svg>
     </button>
+  </div>
+
+  <!-- Modal de recadrage de photo de profil -->
+  <div class="crop-modal" id="crop-modal">
+    <div class="crop-card">
+      <div class="crop-title">Photo de profil</div>
+      <div class="crop-frame" id="crop-frame">
+        <img id="crop-img">
+        <div class="crop-mask"></div>
+      </div>
+      <div class="crop-hint">Glisse pour positionner — utilise le curseur pour zoomer</div>
+      <div class="crop-controls">
+        <span class="crop-icon">−</span>
+        <input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="1">
+        <span class="crop-icon">+</span>
+      </div>
+      <div class="crop-actions">
+        <button class="crop-btn cancel" onclick="cancelCrop()">Annuler</button>
+        <button class="crop-btn validate" onclick="validateCrop()">Valider</button>
+      </div>
+    </div>
   </div>
 
   <nav class="bottom-nav">
@@ -233,7 +309,7 @@
       if (e.key === 'Enter') usernameInput.blur();
     });
 
-    // Photo
+    // Photo : ouvrir le sélecteur, puis le modal de recadrage
     document.getElementById('avatar-wrap').addEventListener('click', () => {
       document.getElementById('photo-input').click();
     });
@@ -241,30 +317,125 @@
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = async () => {
-          const SIZE = 256;
-          const canvas = document.createElement('canvas');
-          canvas.width = SIZE; canvas.height = SIZE;
-          const ctx = canvas.getContext('2d');
-          const minDim = Math.min(img.width, img.height);
-          ctx.drawImage(
-            img,
-            (img.width - minDim) / 2, (img.height - minDim) / 2, minDim, minDim,
-            0, 0, SIZE, SIZE
-          );
-          const dataURL = canvas.toDataURL('image/jpeg', 0.82);
-          profile.photoURL = dataURL;
-          const aImg = document.getElementById('avatar-img');
-          aImg.src = dataURL; aImg.style.display = 'block';
-          document.getElementById('avatar-placeholder').style.display = 'none';
-          await saveProfile();
-        };
-        img.src = reader.result;
-      };
+      reader.onload = () => openCropModal(reader.result);
       reader.readAsDataURL(file);
     });
+
+    // ── ÉDITEUR DE RECADRAGE ─────────────────────────────────────────────
+    const FRAME = 280;       // taille du cadre de recadrage à l'écran
+    const OUT_SIZE = 256;    // taille finale de la photo de profil
+    const cropState = { tx: 0, ty: 0, s: 1, sBase: 1 };
+    const cropImg = document.getElementById('crop-img');
+    const cropFrame = document.getElementById('crop-frame');
+    const cropZoom = document.getElementById('crop-zoom');
+
+    function applyCropTransform() {
+      const total = cropState.s * cropState.sBase;
+      cropImg.style.transform =
+        `translate(-50%, -50%) translate(${cropState.tx}px, ${cropState.ty}px) scale(${total})`;
+    }
+
+    function clampOffset() {
+      const total = cropState.s * cropState.sBase;
+      const halfImgW = (cropImg.naturalWidth  * total) / 2;
+      const halfImgH = (cropImg.naturalHeight * total) / 2;
+      const halfFrame = FRAME / 2;
+      const maxTx = Math.max(0, halfImgW - halfFrame);
+      const maxTy = Math.max(0, halfImgH - halfFrame);
+      cropState.tx = Math.max(-maxTx, Math.min(maxTx, cropState.tx));
+      cropState.ty = Math.max(-maxTy, Math.min(maxTy, cropState.ty));
+    }
+
+    function openCropModal(dataURL) {
+      cropImg.onload = () => {
+        cropState.sBase = Math.max(
+          FRAME / cropImg.naturalWidth,
+          FRAME / cropImg.naturalHeight
+        );
+        cropState.s = 1;
+        cropState.tx = 0;
+        cropState.ty = 0;
+        cropZoom.value = 1;
+        applyCropTransform();
+      };
+      cropImg.src = dataURL;
+      document.getElementById('crop-modal').classList.add('active');
+    }
+
+    function cancelCrop() {
+      document.getElementById('crop-modal').classList.remove('active');
+      document.getElementById('photo-input').value = '';
+    }
+
+    async function validateCrop() {
+      const total = cropState.s * cropState.sBase;
+      const srcSize = FRAME / total;
+      const srcX = cropImg.naturalWidth  / 2 - cropState.tx / total - srcSize / 2;
+      const srcY = cropImg.naturalHeight / 2 - cropState.ty / total - srcSize / 2;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = OUT_SIZE; canvas.height = OUT_SIZE;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cropImg, srcX, srcY, srcSize, srcSize, 0, 0, OUT_SIZE, OUT_SIZE);
+      const dataURL = canvas.toDataURL('image/jpeg', 0.85);
+
+      profile.photoURL = dataURL;
+      const aImg = document.getElementById('avatar-img');
+      aImg.src = dataURL;
+      aImg.style.display = 'block';
+      document.getElementById('avatar-placeholder').style.display = 'none';
+
+      cancelCrop();
+      await saveProfile();
+    }
+
+    // Drag pour repositionner
+    let dragging = false, startX = 0, startY = 0, startTx = 0, startTy = 0;
+    cropFrame.addEventListener('pointerdown', (e) => {
+      if (cropFrame.setPointerCapture) cropFrame.setPointerCapture(e.pointerId);
+      dragging = true;
+      startX = e.clientX; startY = e.clientY;
+      startTx = cropState.tx; startTy = cropState.ty;
+    });
+    cropFrame.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      cropState.tx = startTx + (e.clientX - startX);
+      cropState.ty = startTy + (e.clientY - startY);
+      clampOffset();
+      applyCropTransform();
+    });
+    function endDrag() { dragging = false; }
+    cropFrame.addEventListener('pointerup', endDrag);
+    cropFrame.addEventListener('pointercancel', endDrag);
+    cropFrame.addEventListener('pointerleave', endDrag);
+
+    // Zoom curseur
+    cropZoom.addEventListener('input', () => {
+      cropState.s = parseFloat(cropZoom.value);
+      clampOffset();
+      applyCropTransform();
+    });
+
+    // Pinch to zoom (mobile, à 2 doigts)
+    let pinchStartDist = 0, pinchStartScale = 1;
+    cropFrame.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        const [t1, t2] = e.touches;
+        pinchStartDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        pinchStartScale = cropState.s;
+      }
+    }, { passive: false });
+    cropFrame.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const [t1, t2] = e.touches;
+        const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        cropState.s = Math.max(1, Math.min(3, pinchStartScale * (dist / pinchStartDist)));
+        cropZoom.value = cropState.s;
+        clampOffset();
+        applyCropTransform();
+      }
+    }, { passive: false });
 
     // Films / Actors
     async function addFilm() {
