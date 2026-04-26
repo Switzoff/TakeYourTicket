@@ -339,17 +339,10 @@
         if (ringP[ri] <= 0) continue;
         const r = RINGS[ri], alpha = Math.min(0.4, ringP[ri] * 0.8);
         ctx.strokeStyle = `rgba(200, 215, 255, ${alpha})`;
-        const segs = Math.floor(SPOKES * ringP[ri]);
+        // Anneau en vrai cercle (auto-clippé par le canvas → remplit les coins)
+        const arcEnd = -Math.PI/2 + Math.PI*2 * ringP[ri];
         ctx.beginPath();
-        let needsMove = true;
-        for (let i = 0; i <= segs; i++) {
-          const ai = i % SPOKES;
-          if (r > edgeDistFrom(angles[ai], cx, cy)) { needsMove = true; continue; }
-          const px = cx + Math.cos(angles[ai])*r;
-          const py = cy + Math.sin(angles[ai])*r;
-          if (needsMove) { ctx.moveTo(px, py); needsMove = false; }
-          else ctx.lineTo(px, py);
-        }
+        ctx.arc(cx, cy, r, -Math.PI/2, arcEnd);
         ctx.stroke();
       }
     }
