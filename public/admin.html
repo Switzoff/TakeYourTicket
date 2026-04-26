@@ -89,13 +89,6 @@
           <label>Quantité</label>
           <input type="number" id="quantite" min="1" max="500" value="1" />
         </div>
-        <div class="holo-check">
-          <div>
-            <div class="holo-check-label">Tickets holographiques</div>
-            <div class="holo-check-hint">Édition collector</div>
-          </div>
-          <input type="checkbox" id="holo" />
-        </div>
       </div>
     </div>
 
@@ -272,7 +265,7 @@
       const cinema = document.getElementById('cinema').value.trim();
       const date = document.getElementById('date').value;
       const quantite = parseInt(document.getElementById('quantite').value);
-      const holo = document.getElementById('holo').checked;
+      const holo = false;
       const status = document.getElementById('status');
       const btn = document.getElementById('btn-generer');
 
