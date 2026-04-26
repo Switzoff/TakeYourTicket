@@ -153,11 +153,9 @@
           const img = data.affiche
             ? `<img src="${data.affiche}" alt="${t.film}">`
             : `<div class="ticket-thumb" style="background:linear-gradient(135deg,#1a1a2e,#0f3460)">🎬</div>`;
-          const holo = t.holo ? `<div class="holo-badge">HOLO</div>` : '';
           grid.innerHTML += `
             <div class="ticket-card">
               ${img}
-              ${holo}
               <div class="ticket-info">
                 <div class="title">${t.film}</div>
                 <div class="date">${formatDate(t.date)}</div>
