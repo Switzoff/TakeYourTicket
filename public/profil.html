@@ -9,9 +9,33 @@
     body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 80px; }
 
     .header { padding: 52px 20px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-    .avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: #222; }
-    .avatar-placeholder { width: 72px; height: 72px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; font-size: 28px; }
-    .username { font-size: 18px; font-weight: 600; }
+
+    .avatar-wrap {
+      width: 96px; height: 96px; border-radius: 50%;
+      background: #222; position: relative; overflow: hidden;
+      cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.08);
+    }
+    .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .avatar-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 36px; }
+    .avatar-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .avatar-wrap:hover .avatar-overlay,
+    .avatar-wrap:active .avatar-overlay { opacity: 1; }
+
+    .username-input {
+      background: transparent; border: none; color: #fff;
+      font-size: 18px; font-weight: 600; text-align: center; outline: none;
+      border-bottom: 1px solid transparent;
+      padding: 4px 12px; width: 220px;
+      transition: border-color 0.15s;
+    }
+    .username-input:hover { border-bottom-color: rgba(255,255,255,0.15); }
+    .username-input:focus { border-bottom-color: rgba(255,255,255,0.4); }
     .email { font-size: 12px; color: #555; }
 
     .stats { display: flex; gap: 8px; padding: 0 20px 24px; }
@@ -19,24 +43,43 @@
     .stat .val { font-size: 24px; font-weight: 500; }
     .stat .lbl { color: #555; font-size: 10px; margin-top: 4px; }
 
-    .section { padding: 0 20px 12px; }
+    .section { padding: 0 20px 16px; }
     .section-title { color: #555; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 20px;
+      padding: 7px 10px 7px 14px; font-size: 12px; color: #ddd;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .chip .x {
+      cursor: pointer; color: #666; font-size: 14px; line-height: 1;
+      width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 50%; transition: color 0.15s, background 0.15s;
+    }
+    .chip .x:hover { color: #fff; background: rgba(220, 60, 60, 0.6); }
+
+    .add-btn {
+      background: transparent; border: 1px dashed #3a3a3a; border-radius: 20px;
+      padding: 6px 12px; font-size: 12px; color: #888; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .add-btn:hover { color: #fff; border-color: #888; }
 
     .menu-item {
       display: flex; align-items: center; justify-content: space-between;
       background: #161616; border: 0.5px solid #2a2a2a; border-radius: 14px;
       padding: 16px; margin-bottom: 8px;
       cursor: pointer; color: #fff; text-decoration: none; font-size: 14px;
+      width: 100%;
     }
     .menu-item.danger { color: #e55; }
     .menu-item svg { width: 16px; height: 16px; color: #555; }
 
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
-      background: #0a0a0a;
-      border-top: 0.5px solid #1e1e1e;
-      display: flex;
-      padding: 12px 0 24px;
+      background: #0a0a0a; border-top: 0.5px solid #1e1e1e;
+      display: flex; padding: 12px 0 24px;
     }
     .nav-item {
       flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -49,15 +92,29 @@
 <body>
 
   <div class="header">
-    <div id="avatar-wrap"><div class="avatar-placeholder">👤</div></div>
-    <div class="username" id="username">—</div>
+    <div class="avatar-wrap" id="avatar-wrap">
+      <div class="avatar-placeholder" id="avatar-placeholder">👤</div>
+      <img id="avatar-img" alt="" style="display:none">
+      <div class="avatar-overlay">Modifier</div>
+    </div>
+    <input type="file" id="photo-input" accept="image/*" style="display:none">
+    <input type="text" id="username-input" class="username-input" placeholder="Ton nom" maxlength="40">
     <div class="email" id="email"></div>
   </div>
 
   <div class="stats">
     <div class="stat"><div class="val" id="total">0</div><div class="lbl">Films vus</div></div>
     <div class="stat"><div class="val" id="mois">0</div><div class="lbl">Ce mois</div></div>
-    <div class="stat"><div class="val" id="holos">0</div><div class="lbl">Holos</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Films préférés</div>
+    <div class="chips" id="films-chips"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Acteurs / actrices préférés</div>
+    <div class="chips" id="actors-chips"></div>
   </div>
 
   <div class="section">
@@ -101,30 +158,152 @@
     }
 
     const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) {
-      window.location.href = '/login';
-    } else {
-      document.getElementById('username').textContent = user.displayName || 'Utilisateur';
-      document.getElementById('email').textContent = user.email || '';
-      if (user.photoURL) {
-        document.getElementById('avatar-wrap').innerHTML = `<img class="avatar" src="${user.photoURL}" alt="avatar">`;
-      }
-      charger(user.uid);
+    if (!user) window.location.href = '/login';
+
+    let profile = { displayName: '', photoURL: '', favoriteFilms: [], favoriteActors: [] };
+
+    document.getElementById('email').textContent = user.email || '';
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
-    async function charger(uid) {
+    function renderChips() {
+      const films = document.getElementById('films-chips');
+      films.innerHTML = profile.favoriteFilms.map((f, i) =>
+        `<span class="chip">${escapeHtml(f)}<span class="x" onclick="removeFilm(${i})">✕</span></span>`
+      ).join('') + `<button class="add-btn" onclick="addFilm()">+ Ajouter</button>`;
+
+      const actors = document.getElementById('actors-chips');
+      actors.innerHTML = profile.favoriteActors.map((a, i) =>
+        `<span class="chip">${escapeHtml(a)}<span class="x" onclick="removeActor(${i})">✕</span></span>`
+      ).join('') + `<button class="add-btn" onclick="addActor()">+ Ajouter</button>`;
+    }
+
+    async function loadProfile() {
       try {
-        const res = await fetch(`/api/collections?uid=${uid}`);
+        const r = await fetch(`/api/profile?uid=${user.uid}`);
+        const d = await r.json();
+        profile = {
+          displayName: d.displayName ?? user.displayName ?? '',
+          photoURL: d.photoURL ?? user.photoURL ?? '',
+          favoriteFilms: d.favoriteFilms ?? [],
+          favoriteActors: d.favoriteActors ?? [],
+        };
+      } catch (e) {
+        profile = {
+          displayName: user.displayName || '',
+          photoURL: user.photoURL || '',
+          favoriteFilms: [], favoriteActors: [],
+        };
+      }
+      document.getElementById('username-input').value = profile.displayName;
+      if (profile.photoURL) {
+        const img = document.getElementById('avatar-img');
+        img.src = profile.photoURL;
+        img.style.display = 'block';
+        document.getElementById('avatar-placeholder').style.display = 'none';
+      }
+      renderChips();
+    }
+
+    async function saveProfile() {
+      try {
+        await fetch('/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: user.uid,
+            displayName: profile.displayName,
+            photoURL: profile.photoURL,
+            favoriteFilms: profile.favoriteFilms,
+            favoriteActors: profile.favoriteActors,
+          }),
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    // Username
+    const usernameInput = document.getElementById('username-input');
+    usernameInput.addEventListener('change', async () => {
+      profile.displayName = usernameInput.value.trim();
+      await saveProfile();
+    });
+    usernameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') usernameInput.blur();
+    });
+
+    // Photo
+    document.getElementById('avatar-wrap').addEventListener('click', () => {
+      document.getElementById('photo-input').click();
+    });
+    document.getElementById('photo-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = async () => {
+          const SIZE = 256;
+          const canvas = document.createElement('canvas');
+          canvas.width = SIZE; canvas.height = SIZE;
+          const ctx = canvas.getContext('2d');
+          const minDim = Math.min(img.width, img.height);
+          ctx.drawImage(
+            img,
+            (img.width - minDim) / 2, (img.height - minDim) / 2, minDim, minDim,
+            0, 0, SIZE, SIZE
+          );
+          const dataURL = canvas.toDataURL('image/jpeg', 0.82);
+          profile.photoURL = dataURL;
+          const aImg = document.getElementById('avatar-img');
+          aImg.src = dataURL; aImg.style.display = 'block';
+          document.getElementById('avatar-placeholder').style.display = 'none';
+          await saveProfile();
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Films / Actors
+    async function addFilm() {
+      const name = prompt('Nom du film préféré ?');
+      if (!name || !name.trim()) return;
+      profile.favoriteFilms.push(name.trim());
+      renderChips(); await saveProfile();
+    }
+    async function removeFilm(i) {
+      profile.favoriteFilms.splice(i, 1);
+      renderChips(); await saveProfile();
+    }
+    async function addActor() {
+      const name = prompt('Nom de l\'acteur ou actrice préféré(e) ?');
+      if (!name || !name.trim()) return;
+      profile.favoriteActors.push(name.trim());
+      renderChips(); await saveProfile();
+    }
+    async function removeActor(i) {
+      profile.favoriteActors.splice(i, 1);
+      renderChips(); await saveProfile();
+    }
+
+    // Stats
+    async function loadStats() {
+      try {
+        const res = await fetch(`/api/collections?uid=${user.uid}`);
         const tickets = await res.json();
         document.getElementById('total').textContent = tickets.length;
-        const maintenant = new Date();
+        const now = new Date();
         document.getElementById('mois').textContent = tickets.filter(t => {
           const d = new Date(t.date);
-          return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear();
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
         }).length;
-        document.getElementById('holos').textContent = tickets.filter(t => t.holo).length;
-      } catch(e) { console.error(e); }
+      } catch (e) { console.error(e); }
     }
+
+    loadProfile();
+    loadStats();
   </script>
 </body>
 </html>

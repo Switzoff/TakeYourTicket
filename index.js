@@ -28,7 +28,7 @@ const app = express();
 const TMDB_API_KEY = '6ab36cec6d539dc145a762e4d15524f3';
 const PORT = 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use(express.static('public'));
 
 app.post('/api/generer-tickets', async (req, res) => {
@@ -96,6 +96,26 @@ app.get('/api/collections', async (req, res) => {
   const snapshot = await db.collection('collections').where('uid', '==', uid).get();
   const tickets = snapshot.docs.map(doc => doc.data());
   res.json(tickets);
+});
+
+app.get('/api/profile', async (req, res) => {
+  const { uid } = req.query;
+  if (!uid) return res.status(400).json({ error: 'uid requis' });
+  const doc = await db.collection('profiles').doc(uid).get();
+  if (!doc.exists) return res.json({});
+  res.json(doc.data());
+});
+
+app.post('/api/profile', async (req, res) => {
+  const { uid, displayName, photoURL, favoriteFilms, favoriteActors } = req.body;
+  if (!uid) return res.status(400).json({ error: 'uid requis' });
+  const data = { updatedAt: new Date() };
+  if (displayName !== undefined) data.displayName = displayName;
+  if (photoURL !== undefined) data.photoURL = photoURL;
+  if (Array.isArray(favoriteFilms)) data.favoriteFilms = favoriteFilms;
+  if (Array.isArray(favoriteActors)) data.favoriteActors = favoriteActors;
+  await db.collection('profiles').doc(uid).set(data, { merge: true });
+  res.json({ success: true });
 });
 
 app.get('/scan-page/:id', (req, res) => {
