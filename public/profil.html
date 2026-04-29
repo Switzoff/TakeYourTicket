@@ -266,6 +266,92 @@
     }
     .input-btn.cancel { background: #2a2a2a; color: #fff; }
     .input-btn.validate { background: #fff; color: #000; }
+
+    /* Modal d'ajout de réplique */
+    .quote-modal {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .quote-modal.active { display: flex; }
+    .quote-card {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 16px;
+      padding: 20px; max-width: 380px; width: 100%;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .quote-modal-title { font-size: 14px; font-weight: 600; color: #fff; }
+    .quote-textarea {
+      background: #1d1d1d; border: 0.5px solid #2a2a2a;
+      color: #fff; font-size: 14px; padding: 12px 14px; border-radius: 10px;
+      outline: none; resize: vertical; min-height: 80px; font-family: inherit;
+      line-height: 1.4;
+    }
+    .quote-textarea:focus { border-color: #555; }
+    .quote-film-picker {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 10px 12px;
+      background: #1d1d1d; border: 0.5px solid #2a2a2a; border-radius: 10px;
+      min-height: 56px;
+    }
+    .quote-film-picker .picked {
+      display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
+    }
+    .quote-film-picker .picked img {
+      width: 30px; height: 44px; border-radius: 4px; object-fit: cover; flex-shrink: 0;
+    }
+    .quote-film-picker .picked .name {
+      font-size: 13px; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .quote-film-picker .empty { color: #777; font-size: 13px; flex: 1; }
+    .quote-film-picker button {
+      background: #2a2a2a; color: #fff; border: none;
+      border-radius: 8px; padding: 8px 12px; font-size: 12px; cursor: pointer;
+    }
+    .quote-actions { display: flex; gap: 8px; }
+    .quote-btn {
+      flex: 1; padding: 12px; border-radius: 10px; border: none;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+    .quote-btn.cancel { background: #2a2a2a; color: #fff; }
+    .quote-btn.validate { background: #fff; color: #000; }
+    .quote-btn.validate:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Affichage des répliques préférées */
+    .quote-card-item {
+      flex-shrink: 0; width: 220px;
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 12px;
+      padding: 14px; position: relative;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .quote-card-item .text {
+      color: #ddd; font-size: 12px; line-height: 1.45; font-style: italic;
+      display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+      overflow: hidden; min-height: 70px;
+    }
+    .quote-card-item .film-line {
+      display: flex; align-items: center; gap: 8px;
+      padding-top: 10px; border-top: 0.5px solid #2a2a2a;
+    }
+    .quote-card-item .film-line img {
+      width: 26px; height: 38px; border-radius: 3px; object-fit: cover; flex-shrink: 0;
+    }
+    .quote-card-item .film-line .placeholder {
+      width: 26px; height: 38px; border-radius: 3px; background: #222;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .quote-card-item .film-line .name {
+      font-size: 11px; color: #888; flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .quote-card-item .x {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(0,0,0,0.7); border-radius: 50%;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: #fff; cursor: pointer;
+    }
+    .quote-card-item .x:hover { background: rgba(220, 60, 60, 0.8); }
   </style>
 </head>
 <body>
@@ -292,6 +378,11 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Répliques préférées</div>
+    <div class="fav-row" id="quotes-row"></div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Acteurs / actrices préférés</div>
     <div class="chips" id="actors-chips"></div>
   </div>
@@ -315,6 +406,26 @@
       </div>
       <div class="search-results" id="search-results">
         <div class="search-empty">Tape pour chercher un film</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'ajout de réplique -->
+  <div class="quote-modal" id="quote-modal">
+    <div class="quote-card">
+      <div class="quote-modal-title">Ajouter une réplique</div>
+      <textarea class="quote-textarea" id="quote-text" placeholder="« Avec un grand pouvoir vient de grandes responsabilités. »"></textarea>
+      <div class="quote-film-picker" id="quote-film-picker">
+        <div class="empty" id="quote-film-empty">Aucun film sélectionné</div>
+        <div class="picked" id="quote-film-picked" style="display:none">
+          <img id="quote-film-img" alt="">
+          <div class="name" id="quote-film-name"></div>
+        </div>
+        <button id="quote-film-btn">Choisir un film</button>
+      </div>
+      <div class="quote-actions">
+        <button class="quote-btn cancel" id="quote-cancel">Annuler</button>
+        <button class="quote-btn validate" id="quote-ok">Ajouter</button>
       </div>
     </div>
   </div>
@@ -385,7 +496,7 @@
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user) window.location.href = '/login';
 
-    let profile = { displayName: '', photoURL: '', favoriteFilms: [], favoriteActors: [] };
+    let profile = { displayName: '', photoURL: '', favoriteFilms: [], favoriteActors: [], favoriteQuotes: [] };
 
     document.getElementById('email').textContent = user.email || '';
 
@@ -410,6 +521,26 @@
           <span class="plus">+</span><small>Ajouter</small>
         </button>`;
 
+      const quotes = document.getElementById('quotes-row');
+      quotes.innerHTML = profile.favoriteQuotes.map((q, i) => {
+        const film = q.film || {};
+        const poster = film.poster
+          ? `<img src="${escapeHtml(film.poster)}" alt="" loading="lazy">`
+          : `<div class="placeholder">🎬</div>`;
+        return `
+          <div class="quote-card-item">
+            <div class="text">« ${escapeHtml(q.text)} »</div>
+            <div class="film-line">
+              ${poster}
+              <div class="name">${escapeHtml(film.title || '')}</div>
+            </div>
+            <span class="x" onclick="removeQuote(${i})">✕</span>
+          </div>`;
+      }).join('') + `
+        <button class="fav-add" onclick="openQuoteModal()" aria-label="Ajouter une réplique">
+          <span class="plus">+</span><small>Ajouter</small>
+        </button>`;
+
       const actors = document.getElementById('actors-chips');
       actors.innerHTML = profile.favoriteActors.map((a, i) =>
         `<span class="chip">${escapeHtml(a)}<span class="x" onclick="removeActor(${i})">✕</span></span>`
@@ -431,12 +562,13 @@
           photoURL: d.photoURL ?? user.photoURL ?? '',
           favoriteFilms: (d.favoriteFilms ?? []).map(normalizeFilm),
           favoriteActors: d.favoriteActors ?? [],
+          favoriteQuotes: d.favoriteQuotes ?? [],
         };
       } catch (e) {
         profile = {
           displayName: user.displayName || '',
           photoURL: user.photoURL || '',
-          favoriteFilms: [], favoriteActors: [],
+          favoriteFilms: [], favoriteActors: [], favoriteQuotes: [],
         };
       }
       document.getElementById('username-input').value = profile.displayName;
@@ -460,6 +592,7 @@
             photoURL: profile.photoURL,
             favoriteFilms: profile.favoriteFilms,
             favoriteActors: profile.favoriteActors,
+            favoriteQuotes: profile.favoriteQuotes,
           }),
         });
       } catch (e) { console.error(e); }
@@ -617,6 +750,10 @@
     }
     function closeSearchModal() {
       searchModal.classList.remove('active');
+      // Si on annule depuis le mode "réponse réplique", revenir au modal réplique
+      if (filmPickerMode === 'quote') {
+        document.getElementById('quote-modal').classList.add('active');
+      }
     }
 
     searchInput.addEventListener('input', () => {
@@ -663,15 +800,81 @@
       }
     }
 
+    // Mode du picker de film : 'favorite' (ajouter aux favoris) ou 'quote' (sélection pour une réplique)
+    let filmPickerMode = 'favorite';
+
     async function pickFilm(film) {
-      profile.favoriteFilms.push({ title: film.title, poster: film.poster });
-      renderChips();
-      closeSearchModal();
-      await saveProfile();
+      if (filmPickerMode === 'quote') {
+        setQuoteFilm(film);
+        closeSearchModal(); // revient au modal réplique
+      } else {
+        profile.favoriteFilms.push({ title: film.title, poster: film.poster });
+        renderChips();
+        closeSearchModal();
+        await saveProfile();
+      }
     }
 
     async function removeFilm(i) {
       profile.favoriteFilms.splice(i, 1);
+      renderChips(); await saveProfile();
+    }
+
+    // ── RÉPLIQUES PRÉFÉRÉES ──────────────────────────────────────────────
+    let pendingQuoteFilm = null;
+
+    function openQuoteModal() {
+      pendingQuoteFilm = null;
+      document.getElementById('quote-text').value = '';
+      setQuoteFilm(null);
+      document.getElementById('quote-modal').classList.add('active');
+      setTimeout(() => document.getElementById('quote-text').focus(), 50);
+    }
+    function closeQuoteModal() {
+      document.getElementById('quote-modal').classList.remove('active');
+    }
+    function setQuoteFilm(film) {
+      pendingQuoteFilm = film;
+      const empty = document.getElementById('quote-film-empty');
+      const picked = document.getElementById('quote-film-picked');
+      const btn = document.getElementById('quote-film-btn');
+      if (film) {
+        empty.style.display = 'none';
+        picked.style.display = 'flex';
+        document.getElementById('quote-film-img').src = film.poster || '';
+        document.getElementById('quote-film-name').textContent = film.title || '';
+        btn.textContent = 'Changer';
+      } else {
+        empty.style.display = 'block';
+        picked.style.display = 'none';
+        btn.textContent = 'Choisir un film';
+      }
+    }
+    document.getElementById('quote-film-btn').addEventListener('click', () => {
+      filmPickerMode = 'quote';
+      document.getElementById('quote-modal').classList.remove('active');
+      openSearchModal();
+    });
+    document.getElementById('quote-cancel').addEventListener('click', () => {
+      closeQuoteModal();
+      filmPickerMode = 'favorite';
+    });
+    document.getElementById('quote-ok').addEventListener('click', async () => {
+      const text = document.getElementById('quote-text').value.trim();
+      if (!text) { alert('Écris la réplique d\'abord.'); return; }
+      if (!pendingQuoteFilm) { alert('Choisis le film associé.'); return; }
+      profile.favoriteQuotes.push({
+        text,
+        film: { title: pendingQuoteFilm.title, poster: pendingQuoteFilm.poster },
+      });
+      filmPickerMode = 'favorite';
+      closeQuoteModal();
+      renderChips();
+      await saveProfile();
+    });
+
+    async function removeQuote(i) {
+      profile.favoriteQuotes.splice(i, 1);
       renderChips(); await saveProfile();
     }
     // Mini modal d'entrée texte sombre

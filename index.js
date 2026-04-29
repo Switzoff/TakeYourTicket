@@ -126,14 +126,93 @@ app.get('/api/profile', async (req, res) => {
 });
 
 app.post('/api/profile', async (req, res) => {
-  const { uid, displayName, photoURL, favoriteFilms, favoriteActors } = req.body;
+  const { uid, displayName, photoURL, favoriteFilms, favoriteActors, favoriteQuotes } = req.body;
   if (!uid) return res.status(400).json({ error: 'uid requis' });
   const data = { updatedAt: new Date() };
-  if (displayName !== undefined) data.displayName = displayName;
+  if (displayName !== undefined) {
+    data.displayName = displayName;
+    data.displayNameLower = (displayName || '').toLowerCase();
+  }
   if (photoURL !== undefined) data.photoURL = photoURL;
   if (Array.isArray(favoriteFilms)) data.favoriteFilms = favoriteFilms;
   if (Array.isArray(favoriteActors)) data.favoriteActors = favoriteActors;
+  if (Array.isArray(favoriteQuotes)) data.favoriteQuotes = favoriteQuotes;
   await db.collection('profiles').doc(uid).set(data, { merge: true });
+  res.json({ success: true });
+});
+
+// Profil public (sans email ni liste d'amis) — pour visualisation par d'autres
+app.get('/api/profile-public', async (req, res) => {
+  const { uid } = req.query;
+  if (!uid) return res.status(400).json({ error: 'uid requis' });
+  const doc = await db.collection('profiles').doc(uid).get();
+  if (!doc.exists) return res.json({});
+  const d = doc.data();
+  res.json({
+    uid,
+    displayName: d.displayName || '',
+    photoURL: d.photoURL || '',
+    favoriteFilms: d.favoriteFilms || [],
+    favoriteActors: d.favoriteActors || [],
+    favoriteQuotes: d.favoriteQuotes || [],
+  });
+});
+
+// Recherche d'utilisateurs par nom
+app.get('/api/recherche-utilisateurs', async (req, res) => {
+  const q = (req.query.q || '').toLowerCase().trim();
+  if (q.length < 2) return res.json([]);
+  const snap = await db.collection('profiles').get();
+  const results = snap.docs
+    .map(doc => ({ uid: doc.id, ...doc.data() }))
+    .filter(p => (p.displayName || '').toLowerCase().includes(q))
+    .slice(0, 12)
+    .map(p => ({
+      uid: p.uid,
+      displayName: p.displayName || '',
+      photoURL: p.photoURL || '',
+    }));
+  res.json(results);
+});
+
+// Liste des amis
+app.get('/api/amis', async (req, res) => {
+  const { uid } = req.query;
+  if (!uid) return res.json([]);
+  const doc = await db.collection('profiles').doc(uid).get();
+  const friendUids = doc.exists ? (doc.data().friends || []) : [];
+  if (!friendUids.length) return res.json([]);
+  const friends = await Promise.all(friendUids.map(async (fid) => {
+    const fdoc = await db.collection('profiles').doc(fid).get();
+    if (!fdoc.exists) return null;
+    const f = fdoc.data();
+    return {
+      uid: fid,
+      displayName: f.displayName || '',
+      photoURL: f.photoURL || '',
+    };
+  }));
+  res.json(friends.filter(Boolean));
+});
+
+// Ajouter un ami
+app.post('/api/amis', async (req, res) => {
+  const { uid, friendUid } = req.body;
+  if (!uid || !friendUid) return res.status(400).json({ error: 'uid et friendUid requis' });
+  if (uid === friendUid) return res.status(400).json({ error: 'Pas toi-même' });
+  await db.collection('profiles').doc(uid).set({
+    friends: admin.firestore.FieldValue.arrayUnion(friendUid),
+  }, { merge: true });
+  res.json({ success: true });
+});
+
+// Retirer un ami
+app.delete('/api/amis', async (req, res) => {
+  const { uid, friendUid } = req.query;
+  if (!uid || !friendUid) return res.status(400).json({ error: 'uid et friendUid requis' });
+  await db.collection('profiles').doc(uid).set({
+    friends: admin.firestore.FieldValue.arrayRemove(friendUid),
+  }, { merge: true });
   res.json({ success: true });
 });
 
