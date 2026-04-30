@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TakeYourTicket</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="/auth-init.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 80px; }
@@ -103,16 +106,13 @@
 
   <script>
     function seDeconnecter() {
-      localStorage.clear();
-      window.location.href = '/login';
+      firebase.auth().signOut().finally(() => {
+        localStorage.clear();
+        window.location.href = '/login';
+      });
     }
 
-    const userStored = JSON.parse(localStorage.getItem('user'));
-    if (!userStored) {
-      window.location.href = '/login';
-    } else {
-      charger(userStored.uid);
-    }
+    window.authReady.then((u) => charger());
 
     function formatDate(str) {
       const d = new Date(str);
@@ -120,13 +120,13 @@
       return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
-    async function charger(uid) {
+    async function charger() {
       const grid = document.getElementById('grid');
       const totalEl = document.getElementById('total');
       const moisEl = document.getElementById('mois');
 
       try {
-        const res = await fetch(`/api/collections?uid=${uid}`);
+        const res = await apiFetch('/api/collections');
         const tickets = await res.json();
 
         totalEl.textContent = tickets.length;

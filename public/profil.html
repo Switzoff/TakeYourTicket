@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TakeYourTicket — Profil</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="/auth-init.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 80px; }
@@ -489,16 +492,14 @@
 
   <script>
     function seDeconnecter() {
-      localStorage.clear();
-      window.location.href = '/login';
+      firebase.auth().signOut().finally(() => {
+        localStorage.clear();
+        window.location.href = '/login';
+      });
     }
 
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) window.location.href = '/login';
-
+    let user = null;
     let profile = { displayName: '', photoURL: '', favoriteFilms: [], favoriteActors: [], favoriteQuotes: [] };
-
-    document.getElementById('email').textContent = user.email || '';
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -555,7 +556,7 @@
 
     async function loadProfile() {
       try {
-        const r = await fetch(`/api/profile?uid=${user.uid}`);
+        const r = await apiFetch('/api/profile');
         const d = await r.json();
         profile = {
           displayName: d.displayName ?? user.displayName ?? '',
@@ -583,11 +584,10 @@
 
     async function saveProfile() {
       try {
-        await fetch('/api/profile', {
+        await apiFetch('/api/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            uid: user.uid,
             displayName: profile.displayName,
             photoURL: profile.photoURL,
             favoriteFilms: profile.favoriteFilms,
@@ -923,7 +923,7 @@
     // Stats
     async function loadStats() {
       try {
-        const res = await fetch(`/api/collections?uid=${user.uid}`);
+        const res = await apiFetch('/api/collections');
         const tickets = await res.json();
         document.getElementById('total').textContent = tickets.length;
         const now = new Date();
@@ -934,8 +934,17 @@
       } catch (e) { console.error(e); }
     }
 
-    loadProfile();
-    loadStats();
+    window.authReady.then((firebaseUser) => {
+      user = {
+        uid: firebaseUser.uid,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+        email: firebaseUser.email,
+      };
+      document.getElementById('email').textContent = user.email || '';
+      loadProfile();
+      loadStats();
+    });
   </script>
 </body>
 </html>

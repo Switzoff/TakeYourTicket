@@ -10,16 +10,31 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-async function verifierToken(req) {
+const ADMIN_UIDS = (process.env.ADMIN_UIDS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+async function requireAuth(req, res, next) {
   const token = req.headers.authorization?.split('Bearer ')[1];
-  if (!token) return null;
+  if (!token) return res.status(401).json({ error: 'Token manquant' });
   try {
     const decoded = await admin.auth().verifyIdToken(token);
-    return decoded.uid;
+    req.uid = decoded.uid;
+    req.token = decoded;
+    next();
   } catch {
-    return null;
+    res.status(401).json({ error: 'Token invalide' });
   }
 }
+
+function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (!ADMIN_UIDS.includes(req.uid)) {
+      return res.status(403).json({ error: 'Accès admin requis' });
+    }
+    next();
+  });
+}
+
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
@@ -31,45 +46,54 @@ const PORT = 3000;
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static('public'));
 
-app.post('/api/generer-tickets', async (req, res) => {
-  const { film, cinema, date, quantite, holo } = req.body;
+app.post('/api/generer-tickets', requireAdmin, async (req, res) => {
+  const { film, cinema, date, holo } = req.body;
+  const quantite = parseInt(req.body.quantite, 10);
+  if (!film || !cinema || !date) {
+    return res.status(400).json({ error: 'film, cinema, date requis' });
+  }
+  if (!Number.isInteger(quantite) || quantite < 1 || quantite > 500) {
+    return res.status(400).json({ error: 'quantite doit être entre 1 et 500' });
+  }
+  if (String(film).length > 200 || String(cinema).length > 200) {
+    return res.status(400).json({ error: 'film/cinema trop long' });
+  }
   const ticketsGeneres = [];
   for (let i = 0; i < quantite; i++) {
     const id = uuidv4();
     await db.collection('tickets').doc(id).set({
-      id, film, cinema, date, scanne: false, proprietaire: null, holo: holo || false
+      id, film, cinema, date, scanne: false, proprietaire: null, holo: !!holo
     });
     ticketsGeneres.push(id);
   }
   res.json({ succes: true, tickets: ticketsGeneres });
 });
 
-app.get('/scan/:id', async (req, res) => {
-  const { id } = req.params;
-  const uid = req.query.uid;
-  const doc = await db.collection('tickets').doc(id).get();
-  if (!doc.exists) return res.send('<h1>Ticket invalide</h1>');
-  const ticket = doc.data();
-  if (ticket.scanne) return res.send('<h1>Ce ticket a déjà été scanné</h1>');
-  await db.collection('tickets').doc(id).update({ scanne: true });
-  if (uid) {
-    await db.collection('collections').add({
-      uid,
-      film: ticket.film,
-      cinema: ticket.cinema,
-      date: ticket.date,
-      ticketId: id,
-      holo: ticket.holo || false,
-      createdAt: new Date()
-    });
-  }
-  res.redirect(`/scan-animation?film=${encodeURIComponent(ticket.film)}&holo=${ticket.holo || false}`);
+// Le QR du ticket pointe ici. On redirige vers la page client qui se chargera
+// d'appeler /api/scan/:id avec un token authentifié.
+app.get('/scan/:id', (req, res) => {
+  res.redirect(`/scan-page/${req.params.id}`);
 });
 
-app.get('/api/tickets', async (req, res) => {
-  const snapshot = await db.collection('tickets').get();
-  const tickets = snapshot.docs.map(doc => doc.data());
-  res.json(tickets);
+// Scan authentifié : marque le ticket scanné et l'ajoute à la collection de l'utilisateur connecté.
+app.post('/api/scan/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const ref = db.collection('tickets').doc(id);
+  const doc = await ref.get();
+  if (!doc.exists) return res.status(404).json({ error: 'Ticket invalide' });
+  const ticket = doc.data();
+  if (ticket.scanne) return res.status(409).json({ error: 'Ticket déjà scanné' });
+  await ref.update({ scanne: true, proprietaire: req.uid });
+  await db.collection('collections').add({
+    uid: req.uid,
+    film: ticket.film,
+    cinema: ticket.cinema,
+    date: ticket.date,
+    ticketId: id,
+    holo: ticket.holo || false,
+    createdAt: new Date()
+  });
+  res.json({ success: true, film: ticket.film, holo: !!ticket.holo });
 });
 
 app.get('/collection', (req, res) => {
@@ -106,38 +130,52 @@ app.get('/api/recherche-films', async (req, res) => {
     res.json([]);
   }
 });
+
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
-app.get('/api/collections', async (req, res) => {
-  const { uid } = req.query;
-  if (!uid) return res.json([]);
-  const snapshot = await db.collection('collections').where('uid', '==', uid).get();
+
+app.get('/api/collections', requireAuth, async (req, res) => {
+  const snapshot = await db.collection('collections').where('uid', '==', req.uid).get();
   const tickets = snapshot.docs.map(doc => doc.data());
   res.json(tickets);
 });
 
-app.get('/api/profile', async (req, res) => {
-  const { uid } = req.query;
-  if (!uid) return res.status(400).json({ error: 'uid requis' });
-  const doc = await db.collection('profiles').doc(uid).get();
+app.get('/api/profile', requireAuth, async (req, res) => {
+  const doc = await db.collection('profiles').doc(req.uid).get();
   if (!doc.exists) return res.json({});
   res.json(doc.data());
 });
 
-app.post('/api/profile', async (req, res) => {
-  const { uid, displayName, photoURL, favoriteFilms, favoriteActors, favoriteQuotes } = req.body;
-  if (!uid) return res.status(400).json({ error: 'uid requis' });
+app.post('/api/profile', requireAuth, async (req, res) => {
+  const { displayName, photoURL, favoriteFilms, favoriteActors, favoriteQuotes } = req.body;
   const data = { updatedAt: new Date() };
   if (displayName !== undefined) {
+    if (typeof displayName !== 'string' || displayName.length > 60) {
+      return res.status(400).json({ error: 'displayName invalide' });
+    }
     data.displayName = displayName;
-    data.displayNameLower = (displayName || '').toLowerCase();
+    data.displayNameLower = displayName.toLowerCase();
   }
-  if (photoURL !== undefined) data.photoURL = photoURL;
-  if (Array.isArray(favoriteFilms)) data.favoriteFilms = favoriteFilms;
-  if (Array.isArray(favoriteActors)) data.favoriteActors = favoriteActors;
-  if (Array.isArray(favoriteQuotes)) data.favoriteQuotes = favoriteQuotes;
-  await db.collection('profiles').doc(uid).set(data, { merge: true });
+  if (photoURL !== undefined) {
+    if (typeof photoURL !== 'string' || photoURL.length > 500000) {
+      return res.status(400).json({ error: 'photoURL invalide' });
+    }
+    data.photoURL = photoURL;
+  }
+  if (Array.isArray(favoriteFilms)) {
+    if (favoriteFilms.length > 50) return res.status(400).json({ error: 'trop de films' });
+    data.favoriteFilms = favoriteFilms;
+  }
+  if (Array.isArray(favoriteActors)) {
+    if (favoriteActors.length > 50) return res.status(400).json({ error: 'trop d\'acteurs' });
+    data.favoriteActors = favoriteActors;
+  }
+  if (Array.isArray(favoriteQuotes)) {
+    if (favoriteQuotes.length > 50) return res.status(400).json({ error: 'trop de répliques' });
+    data.favoriteQuotes = favoriteQuotes;
+  }
+  await db.collection('profiles').doc(req.uid).set(data, { merge: true });
   res.json({ success: true });
 });
 
@@ -176,10 +214,8 @@ app.get('/api/recherche-utilisateurs', async (req, res) => {
 });
 
 // Liste des amis
-app.get('/api/amis', async (req, res) => {
-  const { uid } = req.query;
-  if (!uid) return res.json([]);
-  const doc = await db.collection('profiles').doc(uid).get();
+app.get('/api/amis', requireAuth, async (req, res) => {
+  const doc = await db.collection('profiles').doc(req.uid).get();
   const friendUids = doc.exists ? (doc.data().friends || []) : [];
   if (!friendUids.length) return res.json([]);
   const friends = await Promise.all(friendUids.map(async (fid) => {
@@ -196,21 +232,21 @@ app.get('/api/amis', async (req, res) => {
 });
 
 // Ajouter un ami
-app.post('/api/amis', async (req, res) => {
-  const { uid, friendUid } = req.body;
-  if (!uid || !friendUid) return res.status(400).json({ error: 'uid et friendUid requis' });
-  if (uid === friendUid) return res.status(400).json({ error: 'Pas toi-même' });
-  await db.collection('profiles').doc(uid).set({
+app.post('/api/amis', requireAuth, async (req, res) => {
+  const { friendUid } = req.body;
+  if (!friendUid) return res.status(400).json({ error: 'friendUid requis' });
+  if (req.uid === friendUid) return res.status(400).json({ error: 'Pas toi-même' });
+  await db.collection('profiles').doc(req.uid).set({
     friends: admin.firestore.FieldValue.arrayUnion(friendUid),
   }, { merge: true });
   res.json({ success: true });
 });
 
 // Retirer un ami
-app.delete('/api/amis', async (req, res) => {
-  const { uid, friendUid } = req.query;
-  if (!uid || !friendUid) return res.status(400).json({ error: 'uid et friendUid requis' });
-  await db.collection('profiles').doc(uid).set({
+app.delete('/api/amis', requireAuth, async (req, res) => {
+  const { friendUid } = req.query;
+  if (!friendUid) return res.status(400).json({ error: 'friendUid requis' });
+  await db.collection('profiles').doc(req.uid).set({
     friends: admin.firestore.FieldValue.arrayRemove(friendUid),
   }, { merge: true });
   res.json({ success: true });

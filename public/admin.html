@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TakeYourTicket — Admin</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="/auth-init.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -280,12 +283,13 @@
       status.className = 'status';
 
       try {
-        const res = await fetch('/api/generer-tickets', {
+        const res = await apiFetch('/api/generer-tickets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ film, cinema, date, quantite, holo })
         });
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
         lastTickets = data.tickets;
         lastMeta = { film, cinema, date, holo };
         status.textContent = `${data.tickets.length} ticket(s) généré(s)${holo ? ' (HOLO)' : ''}.`;

@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TakeYourTicket — Scan</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="/auth-init.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0a0a; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
@@ -19,14 +22,29 @@
   </div>
   <script>
     const ticketId = window.location.pathname.split('/scan-page/')[1];
-    const user = JSON.parse(localStorage.getItem('user'));
+    const msg = document.getElementById('msg');
+
     if (!ticketId) {
-      document.getElementById('msg').textContent = 'Ticket invalide.';
-    } else if (!user) {
-      localStorage.setItem('pendingTicket', ticketId);
-      window.location.href = '/login';
+      msg.textContent = 'Ticket invalide.';
     } else {
-      window.location.href = '/scan/' + ticketId + '?uid=' + user.uid;
+      // Mémoriser le ticket si pas connecté — auth-init.js redirigera vers /login
+      if (!localStorage.getItem('user')) {
+        localStorage.setItem('pendingTicket', ticketId);
+      }
+      window.authReady.then(async () => {
+        localStorage.removeItem('pendingTicket');
+        try {
+          const res = await apiFetch('/api/scan/' + encodeURIComponent(ticketId), { method: 'POST' });
+          const data = await res.json();
+          if (!res.ok) {
+            msg.textContent = data.error || 'Erreur lors du scan.';
+            return;
+          }
+          window.location.href = `/scan-animation?film=${encodeURIComponent(data.film)}&holo=${data.holo}`;
+        } catch (e) {
+          msg.textContent = 'Erreur réseau.';
+        }
+      });
     }
   </script>
 </body>
