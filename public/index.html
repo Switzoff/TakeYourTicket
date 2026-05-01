@@ -112,8 +112,46 @@
       background: #1a1a1a; border: 0.5px solid #2a2a2a;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       display: flex; align-items: center; justify-content: center; font-size: 36px;
+      cursor: zoom-in; position: relative;
     }
     .detail-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .detail-poster .zoom-hint {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0); transition: background 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .detail-poster:hover .zoom-hint { background: rgba(0,0,0,0.35); }
+    .detail-poster .zoom-hint svg {
+      width: 28px; height: 28px; color: #fff;
+      opacity: 0; transform: scale(0.7); transition: opacity 0.2s, transform 0.2s;
+    }
+    .detail-poster:hover .zoom-hint svg { opacity: 1; transform: scale(1); }
+
+    /* ── POSTER LIGHTBOX ─────────────────────────────────────────────── */
+    .poster-lightbox {
+      position: fixed; inset: 0; z-index: 1200;
+      background: rgba(0,0,0,0.95); backdrop-filter: blur(20px);
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .poster-lightbox.active { opacity: 1; pointer-events: all; }
+    .poster-lightbox img {
+      max-width: min(90vw, 420px); max-height: 88vh;
+      border-radius: 14px; object-fit: contain;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.9);
+      transform: scale(0.88);
+      transition: transform 0.3s cubic-bezier(.2,.8,.2,1);
+    }
+    .poster-lightbox.active img { transform: scale(1); }
+    .poster-lightbox-close {
+      position: absolute; top: 20px; right: 20px;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,255,255,0.12); border: 0.5px solid rgba(255,255,255,0.2);
+      color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .poster-lightbox-close svg { width: 18px; height: 18px; }
     .detail-head-info { flex: 1; padding-bottom: 6px; min-width: 0; }
     .detail-head-info .title {
       font-size: 20px; font-weight: 700; line-height: 1.2;
@@ -302,6 +340,16 @@
     <div class="ticket-paper" id="ticket-paper" onclick="event.stopPropagation()"></div>
   </div>
 
+  <!-- Lightbox affiche -->
+  <div class="poster-lightbox" id="poster-lightbox" onclick="closePosterLightbox(event)">
+    <button class="poster-lightbox-close" onclick="closePosterLightbox()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+    <img id="poster-lightbox-img" src="" alt="">
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <nav class="bottom-nav">
@@ -403,8 +451,14 @@
       if (d.backdrop) backdrop.style.backgroundImage = `url(${d.backdrop})`;
       else if (d.poster) backdrop.style.backgroundImage = `url(${d.poster})`;
 
+      const posterSrc = d.poster ? escapeHtml(d.poster) : '';
       const poster = d.poster
-        ? `<img src="${escapeHtml(d.poster)}" alt="">`
+        ? `<img src="${posterSrc}" alt="">
+           <div class="zoom-hint" onclick="openPosterLightbox('${posterSrc}')">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+               <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/>
+             </svg>
+           </div>`
         : `🎬`;
 
       const collector = ticket.holo
@@ -594,10 +648,22 @@
       }
     }
 
+    // ── Lightbox affiche ─────────────────────────────────────────────
+    function openPosterLightbox(src) {
+      if (!src) return;
+      document.getElementById('poster-lightbox-img').src = src;
+      document.getElementById('poster-lightbox').classList.add('active');
+    }
+    function closePosterLightbox(e) {
+      if (e && e.target.closest('img')) return;
+      document.getElementById('poster-lightbox').classList.remove('active');
+    }
+
     // ── Échap pour fermer ────────────────────────────────────────────
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (document.getElementById('ticket-modal').classList.contains('active')) closeTicket();
+        if (document.getElementById('poster-lightbox').classList.contains('active')) closePosterLightbox();
+        else if (document.getElementById('ticket-modal').classList.contains('active')) closeTicket();
         else if (document.getElementById('detail-modal').classList.contains('active')) closeDetail();
       }
     });
