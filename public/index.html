@@ -550,19 +550,39 @@
     }
 
     // ── Téléchargement ───────────────────────────────────────────────
+    async function urlToDataURL(url) {
+      const r = await fetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
+      if (!r.ok) throw new Error('proxy failed');
+      const blob = await r.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
     async function downloadTicket() {
       if (!currentTicket) return;
-      // Ouvre la vue ticket pour avoir un rendu propre, puis le snapshot
       openTicket();
-      // Laisser le DOM peindre la modal
-      await new Promise(r => setTimeout(r, 250));
+      await new Promise(r => setTimeout(r, 100));
+
       const paper = document.getElementById('ticket-paper');
+
+      // Convertir l'affiche TMDB en data URL pour éviter le CORS lors du snapshot
+      const img = paper.querySelector('.ticket-poster img');
+      if (img && img.src && !img.src.startsWith('data:')) {
+        try {
+          const dataURL = await urlToDataURL(img.src);
+          img.src = dataURL;
+          if (img.decode) await img.decode().catch(() => {});
+        } catch (e) { /* on continue, le poster sera vide */ }
+      }
+
       try {
         const canvas = await html2canvas(paper, {
           backgroundColor: null,
           scale: 2,
-          useCORS: true,
-          allowTaint: true,
         });
         const link = document.createElement('a');
         link.download = `ticket-${(currentDetails?.title || currentTicket.film).replace(/[^a-z0-9]/gi, '_')}.png`;

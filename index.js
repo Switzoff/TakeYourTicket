@@ -170,6 +170,25 @@ app.get('/api/film-details', async (req, res) => {
   }
 });
 
+// Proxy d'images TMDB pour contourner le CORS lors du téléchargement (html2canvas)
+app.get('/api/proxy-image', async (req, res) => {
+  const url = String(req.query.url || '');
+  if (!url.startsWith('https://image.tmdb.org/')) {
+    return res.status(400).json({ error: 'URL non autorisée' });
+  }
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return res.status(r.status).end();
+    res.set('Content-Type', r.headers.get('content-type') || 'image/jpeg');
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cache-Control', 'public, max-age=86400');
+    const buffer = await r.arrayBuffer();
+    res.send(Buffer.from(buffer));
+  } catch (e) {
+    res.status(500).end();
+  }
+});
+
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
