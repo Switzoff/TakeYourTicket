@@ -142,7 +142,6 @@
     <div class="title-group">
       <div class="title-label">Ticket collector</div>
       <div class="film-title" id="filmTitle">—</div>
-      <div class="holo-tag" id="holoTag" style="display:none">✦ Holo</div>
     </div>
     <div class="added-msg">✓ Ajouté à ta collection</div>
   </div>
@@ -156,7 +155,6 @@
   if (replay) document.getElementById('replay-back').classList.add('visible');
 
   document.getElementById('filmTitle').textContent = film;
-  if (holo) document.getElementById('holoTag').style.display = 'inline-block';
 
   fetch('/api/affiche/' + encodeURIComponent(film))
     .then(r => r.json())
