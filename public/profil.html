@@ -354,6 +354,8 @@
     }
     .user-result .add-friend.added { background: #2a2a2a; color: #aaa; }
 
+    .empty-section { color: #555; font-size: 12px; padding: 8px 0; }
+
     /* Carrousel d'amis */
     .friend-card {
       flex-shrink: 0; width: 76px; cursor: pointer;
@@ -1012,10 +1014,7 @@
           <div class="name">${escapeHtml(f.displayName || 'Sans nom')}</div>
         </a>`;
       }).join('');
-      row.innerHTML = cards + `
-        <button class="fav-add" onclick="openUserSearchModal()" aria-label="Ajouter un ami">
-          <span class="plus">+</span><small>Ajouter</small>
-        </button>`;
+      row.innerHTML = cards || `<div class="empty-section">Aucun ami pour l'instant</div>`;
     }
 
     async function loadFriends() {
