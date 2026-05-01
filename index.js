@@ -131,6 +131,45 @@ app.get('/api/recherche-films', async (req, res) => {
   }
 });
 
+// Fiche détaillée d'un film (synopsis + casting + backdrop) pour la page Collection
+app.get('/api/film-details', async (req, res) => {
+  const title = (req.query.title || '').trim();
+  if (!title) return res.status(400).json({ error: 'title requis' });
+  try {
+    const searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}&language=fr-FR`;
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
+    const movie = (searchData.results || [])[0];
+    if (!movie) return res.json({});
+
+    const [detailsRes, creditsRes] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/movie/${movie.id}?api_key=${TMDB_API_KEY}&language=fr-FR`),
+      fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${TMDB_API_KEY}&language=fr-FR`),
+    ]);
+    const details = await detailsRes.json();
+    const credits = await creditsRes.json();
+
+    res.json({
+      id: details.id,
+      title: details.title || '',
+      tagline: details.tagline || '',
+      overview: details.overview || '',
+      releaseDate: details.release_date || '',
+      runtime: details.runtime || null,
+      genres: (details.genres || []).map(g => g.name),
+      poster: details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : null,
+      backdrop: details.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : null,
+      cast: (credits.cast || []).slice(0, 8).map(c => ({
+        name: c.name,
+        character: c.character,
+        photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : null,
+      })),
+    });
+  } catch (e) {
+    res.json({});
+  }
+});
+
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });

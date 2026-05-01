@@ -7,6 +7,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="/auth-init.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 80px; }
@@ -24,7 +25,12 @@
 
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 20px; }
 
-    .ticket-card { background: #161616; border: 0.5px solid #2a2a2a; border-radius: 14px; overflow: hidden; position: relative; }
+    .ticket-card {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 14px;
+      overflow: hidden; position: relative; cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .ticket-card:active { transform: scale(0.97); border-color: #444; }
     .ticket-card img { width: 100%; height: 120px; object-fit: cover; display: block; }
     .ticket-thumb { height: 120px; display: flex; align-items: center; justify-content: center; font-size: 36px; }
     .ticket-info { padding: 10px 10px 12px; }
@@ -44,16 +50,13 @@
       backdrop-filter: blur(4px);
     }
 
-
     .empty { text-align: center; padding: 60px 20px; color: #555; grid-column: span 2; }
     .empty p { font-size: 14px; margin-top: 8px; }
 
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
-      background: #0a0a0a;
-      border-top: 0.5px solid #1e1e1e;
-      display: flex;
-      padding: 12px 0 24px;
+      background: #0a0a0a; border-top: 0.5px solid #1e1e1e;
+      display: flex; padding: 12px 0 24px;
     }
     .nav-item {
       flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -62,6 +65,200 @@
     }
     .nav-item.active { color: #fff; }
     .nav-item svg { width: 22px; height: 22px; }
+
+    /* ── FICHE DÉTAILLÉE (modal plein écran) ─────────────────────────── */
+    .detail-modal {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #0a0a0a;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(.2,.8,.2,1);
+      overflow-y: auto;
+      will-change: transform;
+    }
+    .detail-modal.active { transform: translateY(0); }
+
+    .detail-hero {
+      position: relative; width: 100%; height: 280px;
+      background: #1a1a1a;
+      overflow: hidden;
+    }
+    .detail-hero .backdrop {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      opacity: 0.55;
+    }
+    .detail-hero .gradient {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(10,10,10,0.3) 0%, rgba(10,10,10,0.1) 40%, #0a0a0a 100%);
+    }
+    .detail-hero .close-btn {
+      position: absolute; top: 16px; left: 16px; z-index: 5;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .detail-hero .close-btn svg { width: 20px; height: 20px; }
+
+    .detail-head {
+      position: relative; padding: 0 20px;
+      margin-top: -90px;
+      display: flex; gap: 14px; align-items: flex-end;
+    }
+    .detail-poster {
+      flex-shrink: 0; width: 110px; height: 165px;
+      border-radius: 10px; overflow: hidden;
+      background: #1a1a1a; border: 0.5px solid #2a2a2a;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center; font-size: 36px;
+    }
+    .detail-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .detail-head-info { flex: 1; padding-bottom: 6px; min-width: 0; }
+    .detail-head-info .title {
+      font-size: 20px; font-weight: 700; line-height: 1.2;
+    }
+    .detail-head-info .tagline {
+      color: #888; font-size: 12px; font-style: italic; margin-top: 4px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .detail-meta {
+      display: flex; flex-wrap: wrap; gap: 6px; padding: 16px 20px 0;
+    }
+    .meta-chip {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 18px;
+      padding: 6px 12px; font-size: 11px; color: #ddd;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .meta-chip.collector {
+      background: linear-gradient(135deg, #2d1b3e, #1a1a2e);
+      border-color: #5a3a7a; color: #fff;
+    }
+    .meta-chip svg { width: 12px; height: 12px; }
+
+    .detail-section { padding: 20px 20px 4px; }
+    .detail-section .label {
+      color: #555; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .detail-section .body {
+      color: #ccc; font-size: 13px; line-height: 1.55;
+    }
+
+    .cast-row {
+      display: flex; gap: 10px; overflow-x: auto;
+      padding: 4px 20px 8px; scrollbar-width: none;
+    }
+    .cast-row::-webkit-scrollbar { display: none; }
+    .cast-card { flex-shrink: 0; width: 86px; }
+    .cast-card .photo {
+      width: 86px; height: 86px; border-radius: 50%; overflow: hidden;
+      background: #1a1a1a; border: 0.5px solid #2a2a2a;
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+    }
+    .cast-card .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cast-card .name {
+      font-size: 11px; color: #fff; margin-top: 8px; line-height: 1.25;
+      text-align: center;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .cast-card .role {
+      font-size: 10px; color: #666; margin-top: 2px; text-align: center;
+      display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .detail-actions {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+      padding: 24px 20px 32px;
+    }
+    .action-btn {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 12px;
+      padding: 14px; color: #fff; font-size: 13px; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .action-btn:hover { background: #1f1f1f; border-color: #444; }
+    .action-btn.primary { background: #fff; color: #000; border-color: #fff; grid-column: span 2; }
+    .action-btn.primary:hover { background: #e6e6e6; }
+    .action-btn svg { width: 16px; height: 16px; }
+
+    .detail-loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 80px 20px; color: #555; font-size: 13px;
+    }
+
+    /* ── VUE TICKET (modal secondaire) ──────────────────────────────── */
+    .ticket-modal {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,0.92); backdrop-filter: blur(12px);
+      display: none; align-items: center; justify-content: center;
+      padding: 24px;
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .ticket-modal.active { display: flex; opacity: 1; }
+    .ticket-paper {
+      width: 100%; max-width: 340px;
+      background: linear-gradient(180deg, #1c1c1c 0%, #0f0f0f 100%);
+      border: 0.5px solid #333; border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      transform: scale(0.9);
+      transition: transform 0.25s;
+    }
+    .ticket-modal.active .ticket-paper { transform: scale(1); }
+    .ticket-paper.holo {
+      background:
+        linear-gradient(120deg,
+          rgba(255,200,255,0.1) 0%,
+          rgba(180,220,255,0.08) 25%,
+          rgba(255,255,180,0.1) 50%,
+          rgba(180,255,200,0.08) 75%,
+          rgba(255,200,255,0.1) 100%),
+        linear-gradient(180deg, #1c1c1c 0%, #0f0f0f 100%);
+      border-color: rgba(180,180,255,0.4);
+    }
+    .ticket-paper .ticket-poster {
+      width: 100%; aspect-ratio: 2/3; background: #1a1a1a;
+      display: flex; align-items: center; justify-content: center; font-size: 48px;
+    }
+    .ticket-paper .ticket-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ticket-paper .ticket-perforation {
+      height: 1px; background: repeating-linear-gradient(
+        to right, #333 0, #333 6px, transparent 6px, transparent 12px
+      );
+    }
+    .ticket-paper .ticket-body { padding: 18px 20px 22px; }
+    .ticket-paper .t-title { font-size: 16px; font-weight: 700; line-height: 1.3; }
+    .ticket-paper .t-cinema { color: #aaa; font-size: 12px; margin-top: 8px; }
+    .ticket-paper .t-date { color: #fff; font-size: 13px; margin-top: 4px; font-weight: 500; }
+    .ticket-paper .t-id {
+      font-family: 'SF Mono', Menlo, monospace; font-size: 9px;
+      color: #555; margin-top: 14px; letter-spacing: 1px;
+    }
+    .ticket-paper .t-tag {
+      display: inline-block; margin-top: 12px;
+      background: rgba(180,180,255,0.15); border: 0.5px solid rgba(180,180,255,0.3);
+      color: #cdf; font-size: 10px; font-weight: 600;
+      padding: 3px 8px; border-radius: 4px; letter-spacing: 1px; text-transform: uppercase;
+    }
+    .ticket-modal-close {
+      position: absolute; top: 24px; right: 24px;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,255,255,0.1); border: 0.5px solid rgba(255,255,255,0.15);
+      color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Toast minimaliste */
+    .toast {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,0.95); color: #000;
+      padding: 10px 18px; border-radius: 24px;
+      font-size: 13px; font-weight: 500;
+      z-index: 2000; opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
@@ -79,6 +276,33 @@
   <div class="grid" id="grid">
     <div class="empty"><p>Scanne ton premier ticket !</p></div>
   </div>
+
+  <!-- Fiche détaillée -->
+  <div class="detail-modal" id="detail-modal">
+    <div class="detail-hero">
+      <div class="backdrop" id="detail-backdrop"></div>
+      <div class="gradient"></div>
+      <button class="close-btn" onclick="closeDetail()" aria-label="Fermer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="detail-content"></div>
+  </div>
+
+  <!-- Vue ticket "physique" -->
+  <div class="ticket-modal" id="ticket-modal" onclick="closeTicket(event)">
+    <button class="ticket-modal-close" onclick="closeTicket()" aria-label="Fermer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+    <div class="ticket-paper" id="ticket-paper" onclick="event.stopPropagation()"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
 
   <nav class="bottom-nav">
     <a href="/" class="nav-item active">
@@ -105,14 +329,9 @@
   </nav>
 
   <script>
-    function seDeconnecter() {
-      firebase.auth().signOut().finally(() => {
-        localStorage.clear();
-        window.location.href = '/login';
-      });
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
-
-    window.authReady.then((u) => charger());
 
     function formatDate(str) {
       const d = new Date(str);
@@ -120,6 +339,250 @@
       return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => el.classList.remove('show'), 2000);
+    }
+
+    // Cache des affiches + détails
+    const posterCache = new Map();
+    const detailsCache = new Map();
+
+    async function fetchPoster(film) {
+      if (posterCache.has(film)) return posterCache.get(film);
+      try {
+        const r = await fetch(`/api/affiche/${encodeURIComponent(film)}`);
+        const d = await r.json();
+        posterCache.set(film, d.affiche || null);
+        return d.affiche || null;
+      } catch { return null; }
+    }
+
+    async function fetchDetails(film) {
+      if (detailsCache.has(film)) return detailsCache.get(film);
+      try {
+        const r = await fetch(`/api/film-details?title=${encodeURIComponent(film)}`);
+        const d = await r.json();
+        detailsCache.set(film, d);
+        return d;
+      } catch { return {}; }
+    }
+
+    let currentTicket = null;
+    let currentDetails = null;
+
+    async function openDetail(ticket) {
+      currentTicket = ticket;
+      currentDetails = null;
+
+      const modal = document.getElementById('detail-modal');
+      const backdrop = document.getElementById('detail-backdrop');
+      const content = document.getElementById('detail-content');
+
+      backdrop.style.backgroundImage = '';
+      content.innerHTML = `<div class="detail-loading">Chargement…</div>`;
+      modal.scrollTop = 0;
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+
+      const details = await fetchDetails(ticket.film);
+      currentDetails = details;
+      renderDetail(ticket, details);
+    }
+
+    function closeDetail() {
+      document.getElementById('detail-modal').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function renderDetail(ticket, d) {
+      const backdrop = document.getElementById('detail-backdrop');
+      if (d.backdrop) backdrop.style.backgroundImage = `url(${d.backdrop})`;
+      else if (d.poster) backdrop.style.backgroundImage = `url(${d.poster})`;
+
+      const poster = d.poster
+        ? `<img src="${escapeHtml(d.poster)}" alt="">`
+        : `🎬`;
+
+      const collector = ticket.holo
+        ? `<span class="meta-chip collector">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+             </svg>
+             Collector
+           </span>`
+        : `<span class="meta-chip">Standard</span>`;
+
+      const cinemaChip = ticket.cinema
+        ? `<span class="meta-chip">📍 ${escapeHtml(ticket.cinema)}</span>`
+        : '';
+      const dateChip = `<span class="meta-chip">📅 ${escapeHtml(formatDate(ticket.date))}</span>`;
+      const runtimeChip = d.runtime
+        ? `<span class="meta-chip">⏱ ${d.runtime} min</span>` : '';
+      const genreChips = (d.genres || []).slice(0, 2).map(g =>
+        `<span class="meta-chip">${escapeHtml(g)}</span>`
+      ).join('');
+
+      const overview = d.overview
+        ? `<div class="detail-section">
+             <div class="label">Synopsis</div>
+             <div class="body">${escapeHtml(d.overview)}</div>
+           </div>`
+        : '';
+
+      const cast = (d.cast || []).length
+        ? `<div class="detail-section">
+             <div class="label">Casting</div>
+           </div>
+           <div class="cast-row">
+             ${d.cast.map(c => {
+               const photo = c.photo
+                 ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy">`
+                 : `👤`;
+               return `<div class="cast-card">
+                 <div class="photo">${photo}</div>
+                 <div class="name">${escapeHtml(c.name || '')}</div>
+                 ${c.character ? `<div class="role">${escapeHtml(c.character)}</div>` : ''}
+               </div>`;
+             }).join('')}
+           </div>`
+        : '';
+
+      document.getElementById('detail-content').innerHTML = `
+        <div class="detail-head">
+          <div class="detail-poster">${poster}</div>
+          <div class="detail-head-info">
+            <div class="title">${escapeHtml(d.title || ticket.film)}</div>
+            ${d.tagline ? `<div class="tagline">${escapeHtml(d.tagline)}</div>` : ''}
+          </div>
+        </div>
+
+        <div class="detail-meta">
+          ${collector}
+          ${dateChip}
+          ${cinemaChip}
+          ${runtimeChip}
+          ${genreChips}
+        </div>
+
+        ${overview}
+
+        ${cast}
+
+        <div class="detail-actions">
+          <button class="action-btn primary" onclick="openTicket()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 9V7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/>
+              <path d="M13 5v2M13 17v2M13 11v2"/>
+            </svg>
+            Voir le ticket
+          </button>
+          <button class="action-btn" onclick="shareTicket()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/>
+            </svg>
+            Partager
+          </button>
+          <button class="action-btn" onclick="downloadTicket()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Télécharger
+          </button>
+        </div>
+      `;
+    }
+
+    // ── Vue ticket physique ──────────────────────────────────────────
+    function openTicket() {
+      if (!currentTicket) return;
+      const t = currentTicket;
+      const d = currentDetails || {};
+      const paper = document.getElementById('ticket-paper');
+      paper.classList.toggle('holo', !!t.holo);
+
+      const poster = d.poster
+        ? `<img src="${escapeHtml(d.poster)}" alt="">`
+        : `🎬`;
+
+      paper.innerHTML = `
+        <div class="ticket-poster">${poster}</div>
+        <div class="ticket-perforation"></div>
+        <div class="ticket-body">
+          <div class="t-title">${escapeHtml(d.title || t.film)}</div>
+          <div class="t-cinema">${escapeHtml(t.cinema || '')}</div>
+          <div class="t-date">${escapeHtml(formatDate(t.date))}</div>
+          ${t.holo ? `<span class="t-tag">Collector</span>` : ''}
+          <div class="t-id">#${escapeHtml((t.ticketId || '').slice(0, 8).toUpperCase())}</div>
+        </div>
+      `;
+      document.getElementById('ticket-modal').classList.add('active');
+    }
+
+    function closeTicket(e) {
+      if (e && e.target.closest('.ticket-paper')) return;
+      document.getElementById('ticket-modal').classList.remove('active');
+    }
+
+    // ── Partage ──────────────────────────────────────────────────────
+    async function shareTicket() {
+      if (!currentTicket) return;
+      const t = currentTicket;
+      const d = currentDetails || {};
+      const text = `J'ai vu "${d.title || t.film}" ${t.cinema ? `au ${t.cinema}` : ''} le ${formatDate(t.date)}.`;
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: 'TakeYourTicket',
+            text,
+            url: window.location.origin,
+          });
+        } else {
+          await navigator.clipboard.writeText(text);
+          showToast('Copié dans le presse-papiers');
+        }
+      } catch (e) { /* annulé */ }
+    }
+
+    // ── Téléchargement ───────────────────────────────────────────────
+    async function downloadTicket() {
+      if (!currentTicket) return;
+      // Ouvre la vue ticket pour avoir un rendu propre, puis le snapshot
+      openTicket();
+      // Laisser le DOM peindre la modal
+      await new Promise(r => setTimeout(r, 250));
+      const paper = document.getElementById('ticket-paper');
+      try {
+        const canvas = await html2canvas(paper, {
+          backgroundColor: null,
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+        });
+        const link = document.createElement('a');
+        link.download = `ticket-${(currentDetails?.title || currentTicket.film).replace(/[^a-z0-9]/gi, '_')}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('Téléchargé');
+      } catch (e) {
+        showToast('Erreur lors du téléchargement');
+      }
+    }
+
+    // ── Échap pour fermer ────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (document.getElementById('ticket-modal').classList.contains('active')) closeTicket();
+        else if (document.getElementById('detail-modal').classList.contains('active')) closeDetail();
+      }
+    });
+
+    // ── Chargement collection ────────────────────────────────────────
     async function charger() {
       const grid = document.getElementById('grid');
       const totalEl = document.getElementById('total');
@@ -130,13 +593,11 @@
         const tickets = await res.json();
 
         totalEl.textContent = tickets.length;
-
-        const maintenant = new Date();
-        const ceMois = tickets.filter(t => {
+        const now = new Date();
+        moisEl.textContent = tickets.filter(t => {
           const d = new Date(t.date);
-          return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear();
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
         }).length;
-        moisEl.textContent = ceMois;
 
         if (tickets.length === 0) {
           grid.innerHTML = '<div class="empty"><p>Scanne ton premier ticket !</p></div>';
@@ -144,25 +605,35 @@
         }
 
         grid.innerHTML = '';
-        for (const t of [...tickets].reverse()) {
-          const r = await fetch(`/api/affiche/${encodeURIComponent(t.film)}`);
-          const data = await r.json();
-          const img = data.affiche
-            ? `<img src="${data.affiche}" alt="${t.film}">`
+        const ordered = [...tickets].reverse();
+        // Préchargement des cartes (avec affiches en parallèle)
+        const cards = await Promise.all(ordered.map(async (t, i) => {
+          const affiche = await fetchPoster(t.film);
+          const img = affiche
+            ? `<img src="${affiche}" alt="${escapeHtml(t.film)}">`
             : `<div class="ticket-thumb" style="background:linear-gradient(135deg,#1a1a2e,#0f3460)">🎬</div>`;
-          grid.innerHTML += `
-            <div class="ticket-card">
+          const holo = t.holo ? `<div class="holo-badge">COLLECTOR</div>` : '';
+          return `
+            <div class="ticket-card" data-idx="${i}">
               ${img}
+              ${holo}
               <div class="ticket-info">
-                <div class="title">${t.film}</div>
+                <div class="title">${escapeHtml(t.film)}</div>
                 <div class="date">${formatDate(t.date)}</div>
               </div>
             </div>`;
-        }
-      } catch(e) {
-        console.error('Erreur:', e);
-      }
+        }));
+        grid.innerHTML = cards.join('');
+        grid.querySelectorAll('.ticket-card').forEach(el => {
+          el.addEventListener('click', () => {
+            const idx = parseInt(el.dataset.idx, 10);
+            openDetail(ordered[idx]);
+          });
+        });
+      } catch (e) { console.error('Erreur:', e); }
     }
+
+    window.authReady.then(() => charger());
   </script>
 </body>
 </html>
