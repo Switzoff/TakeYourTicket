@@ -111,11 +111,27 @@
       from { transform: translateY(16px); opacity: 0; }
       to   { transform: translateY(0);    opacity: 1; }
     }
+
+    .replay-back {
+      position: fixed; top: 20px; left: 20px; z-index: 200;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      color: #fff; cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+    }
+    .replay-back.visible { display: flex; }
+    .replay-back svg { width: 20px; height: 20px; }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
   <div class="flash"></div>
+  <button class="replay-back" id="replay-back" onclick="history.back()" aria-label="Retour">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+  </button>
 
   <div class="scene">
     <div class="ticket-wrap" id="card">
@@ -136,6 +152,8 @@
   const params = new URLSearchParams(location.search);
   const film = params.get('film') || 'Film';
   const holo = params.get('holo') === 'true';
+  const replay = params.get('replay') === '1';
+  if (replay) document.getElementById('replay-back').classList.add('visible');
 
   document.getElementById('filmTitle').textContent = film;
   if (holo) document.getElementById('holoTag').style.display = 'inline-block';
@@ -633,8 +651,10 @@
   };
   (ANIMS[theme] || ANIMS.default)();
 
-  // Redirect vers la collection après l'animation (Spider-Man plus long à cause de la descente)
-  setTimeout(() => { window.location.href = '/'; }, theme === 'spiderman' ? 5400 : 4800);
+  // Redirect vers la collection après l'animation (sauf en mode replay)
+  if (!replay) {
+    setTimeout(() => { window.location.href = '/'; }, theme === 'spiderman' ? 5400 : 4800);
+  }
   </script>
 </body>
 </html>
