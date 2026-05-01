@@ -13,7 +13,9 @@ window.authReady = new Promise(r => { resolveAuth = r; });
 
 firebase.auth().onAuthStateChanged((user) => {
   if (!user) {
+    const pending = localStorage.getItem('pendingTicket');
     localStorage.clear();
+    if (pending) localStorage.setItem('pendingTicket', pending);
     if (location.pathname !== '/login') location.href = '/login';
     return;
   }
