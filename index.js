@@ -264,6 +264,10 @@ app.get('/profil', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'profil.html'));
 });
 
+app.get('/u/:uid', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'public-profile.html'));
+});
+
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
