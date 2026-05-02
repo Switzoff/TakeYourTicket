@@ -40,7 +40,14 @@
             msg.textContent = data.error || 'Erreur lors du scan.';
             return;
           }
-          window.location.href = `/scan-animation?film=${encodeURIComponent(data.film)}&holo=${data.holo}`;
+          let url = `/scan-animation?film=${encodeURIComponent(data.film)}&holo=${data.holo}`;
+          if (data.badge) {
+            url += `&badgeName=${encodeURIComponent(data.badge.name)}`
+                +  `&badgeIcon=${encodeURIComponent(data.badge.icon)}`
+                +  `&badgeColor=${encodeURIComponent(data.badge.color || '')}`
+                +  `&badgeAccent=${encodeURIComponent(data.badge.accent || '')}`;
+          }
+          window.location.href = url;
         } catch (e) {
           msg.textContent = 'Erreur réseau.';
         }

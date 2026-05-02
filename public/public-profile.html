@@ -7,6 +7,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="/auth-init.js"></script>
+  <script src="/badge-render.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 80px; }
@@ -96,6 +97,24 @@
 
     .empty-section { color: #555; font-size: 12px; padding: 8px 0; }
 
+    .badges-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .badge-tile { aspect-ratio: 1; padding: 4px; background: transparent; border: none; cursor: pointer; transition: transform 0.15s; }
+    .badge-tile:hover, .badge-tile:active { transform: scale(1.06); }
+    .badge-tile svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5)); }
+    .badges-empty { grid-column: 1 / -1; color: #555; font-size: 12px; padding: 12px 0; text-align: center; }
+
+    .badge-detail-modal { position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.92); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; padding: 24px; opacity: 0; transition: opacity 0.25s; }
+    .badge-detail-modal.active { display: flex; opacity: 1; }
+    .badge-detail-card { background: #161616; border: 0.5px solid #2a2a2a; border-radius: 18px; padding: 28px 24px; max-width: 360px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; transform: scale(0.92); transition: transform 0.25s; }
+    .badge-detail-modal.active .badge-detail-card { transform: scale(1); }
+    .badge-detail-disc { width: 180px; height: 180px; }
+    .badge-detail-disc svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 8px 24px rgba(0,0,0,0.6)); }
+    .badge-detail-name { font-size: 18px; font-weight: 700; text-align: center; margin-top: 8px; }
+    .badge-detail-desc { font-size: 13px; color: #aaa; text-align: center; line-height: 1.5; }
+    .badge-detail-meta { width: 100%; margin-top: 8px; padding-top: 14px; border-top: 0.5px solid #2a2a2a; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #888; }
+    .badge-detail-meta b { color: #ddd; font-weight: 500; }
+    .badge-detail-close { margin-top: 14px; width: 100%; background: #2a2a2a; color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 500; cursor: pointer; }
+
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: #0a0a0a; border-top: 0.5px solid #1e1e1e;
@@ -129,6 +148,11 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Badges</div>
+    <div class="badges-grid" id="badges-grid"></div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Films préférés</div>
     <div class="fav-row" id="films-row"></div>
   </div>
@@ -141,6 +165,20 @@
   <div class="section">
     <div class="section-title">Acteurs / actrices préférés</div>
     <div class="chips" id="actors-chips"></div>
+  </div>
+
+  <!-- Modal détail badge -->
+  <div class="badge-detail-modal" id="badge-detail-modal" onclick="closeBadgeDetail(event)">
+    <div class="badge-detail-card" onclick="event.stopPropagation()">
+      <div class="badge-detail-disc" id="bd-disc"></div>
+      <div class="badge-detail-name" id="bd-name">—</div>
+      <div class="badge-detail-desc" id="bd-desc"></div>
+      <div class="badge-detail-meta">
+        <div>Débloqué le <b id="bd-date">—</b></div>
+        <div>Avec : <b id="bd-film">—</b></div>
+      </div>
+      <button class="badge-detail-close" onclick="closeBadgeDetail()">Fermer</button>
+    </div>
   </div>
 
   <nav class="bottom-nav">
@@ -174,11 +212,25 @@
       return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
+    let currentProfileBadges = [];
+
     function render(profile) {
       document.getElementById('display-name').textContent = profile.displayName || 'Sans nom';
       const avatar = document.getElementById('avatar');
       if (profile.photoURL) {
         avatar.innerHTML = `<img src="${escapeHtml(profile.photoURL)}" alt="">`;
+      }
+
+      currentProfileBadges = profile.badges || [];
+      const badgesGrid = document.getElementById('badges-grid');
+      if (!currentProfileBadges.length) {
+        badgesGrid.innerHTML = '<div class="badges-empty">Aucun badge</div>';
+      } else {
+        badgesGrid.innerHTML = currentProfileBadges.map((b, i) => `
+          <button class="badge-tile" onclick="openBadgeDetail(${i})" aria-label="${escapeHtml(b.name)}">
+            ${window.renderBadge(b, { size: 110, withText: false })}
+          </button>
+        `).join('');
       }
 
       const films = (profile.favoriteFilms || []).map(f => (typeof f === 'string') ? { title: f } : f);
@@ -224,6 +276,29 @@
         ).join('');
       }
     }
+
+    function openBadgeDetail(i) {
+      const b = currentProfileBadges[i];
+      if (!b) return;
+      document.getElementById('bd-disc').innerHTML = window.renderBadge(b, { size: 180 });
+      document.getElementById('bd-name').textContent = b.name || '';
+      document.getElementById('bd-desc').textContent = b.description || '';
+      document.getElementById('bd-film').textContent = b.filmTitle || '—';
+      const date = b.unlockedAt ? new Date(b.unlockedAt) : null;
+      document.getElementById('bd-date').textContent = date && !isNaN(date)
+        ? date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '—';
+      document.getElementById('badge-detail-modal').classList.add('active');
+    }
+    function closeBadgeDetail(e) {
+      if (e && e.target.closest('.badge-detail-card')) return;
+      document.getElementById('badge-detail-modal').classList.remove('active');
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('badge-detail-modal').classList.contains('active')) {
+        closeBadgeDetail();
+      }
+    });
 
     async function setFriendButton(isFriend) {
       const wrap = document.getElementById('friend-action');

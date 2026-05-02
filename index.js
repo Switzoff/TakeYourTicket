@@ -38,6 +38,7 @@ function requireAdmin(req, res, next) {
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const { findBadgeForFilm } = require('./badges');
 
 const app = express();
 const TMDB_API_KEY = '6ab36cec6d539dc145a762e4d15524f3';
@@ -93,7 +94,34 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
     holo: ticket.holo || false,
     createdAt: new Date()
   });
-  res.json({ success: true, film: ticket.film, holo: !!ticket.holo });
+
+  // Attribution automatique d'un badge selon le film, en évitant les doublons
+  let unlockedBadge = null;
+  const badge = findBadgeForFilm(ticket.film);
+  if (badge) {
+    const profileRef = db.collection('profiles').doc(req.uid);
+    const profileDoc = await profileRef.get();
+    const existing = profileDoc.exists ? (profileDoc.data().badges || []) : [];
+    if (!existing.some(b => b.id === badge.id)) {
+      const newBadge = {
+        id: badge.id,
+        name: badge.name,
+        icon: badge.icon,
+        color: badge.color || '#2a2a2a',
+        accent: badge.accent || '#d4a017',
+        description: badge.description,
+        ticketId: id,
+        filmTitle: ticket.film,
+        unlockedAt: new Date().toISOString(),
+      };
+      await profileRef.set({
+        badges: admin.firestore.FieldValue.arrayUnion(newBadge),
+      }, { merge: true });
+      unlockedBadge = newBadge;
+    }
+  }
+
+  res.json({ success: true, film: ticket.film, holo: !!ticket.holo, badge: unlockedBadge });
 });
 
 app.get('/collection', (req, res) => {
@@ -251,6 +279,7 @@ app.get('/api/profile-public', async (req, res) => {
     favoriteFilms: d.favoriteFilms || [],
     favoriteActors: d.favoriteActors || [],
     favoriteQuotes: d.favoriteQuotes || [],
+    badges: d.badges || [],
   });
 });
 
