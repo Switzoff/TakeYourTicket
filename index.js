@@ -359,6 +359,11 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+app.get('/api/badges', (req, res) => {
+  const { BADGES } = require('./badges');
+  res.json(BADGES.map(({ id, name, icon, color, accent, description }) => ({ id, name, icon, color, accent, description })));
+});
+
 app.get('/scan-animation', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'scan-animation.html'));
 });

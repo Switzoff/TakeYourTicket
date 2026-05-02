@@ -143,6 +143,17 @@
 
     <div class="qr-grid" id="qr-grid"></div>
     <div id="qr-hidden"></div>
+
+    <div class="card" style="margin-top:24px">
+      <div class="card-title">Tester l'animation badge</div>
+      <div class="form">
+        <div class="row">
+          <label>Badge</label>
+          <select id="badge-select"><option value="">Chargement…</option></select>
+        </div>
+        <button class="btn-secondary" onclick="testerBadge()">Lancer l'animation</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -483,6 +494,32 @@
       const d = new Date(str);
       if (isNaN(d)) return str;
       return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    // Badge test
+    let badgeList = [];
+    async function loadBadges() {
+      try {
+        const res = await fetch('/api/badges');
+        badgeList = await res.json();
+        const sel = document.getElementById('badge-select');
+        sel.innerHTML = badgeList.map(b =>
+          `<option value="${b.id}">${b.icon} ${b.name}</option>`
+        ).join('');
+      } catch {}
+    }
+    loadBadges();
+
+    function testerBadge() {
+      const sel = document.getElementById('badge-select');
+      const badge = badgeList.find(b => b.id === sel.value);
+      if (!badge) return;
+      const url = `/scan-animation?film=Test&holo=false`
+        + `&badgeName=${encodeURIComponent(badge.name)}`
+        + `&badgeIcon=${encodeURIComponent(badge.icon)}`
+        + `&badgeColor=${encodeURIComponent(badge.color || '')}`
+        + `&badgeAccent=${encodeURIComponent(badge.accent || '')}`;
+      window.open(url, '_blank');
     }
   </script>
 </body>
