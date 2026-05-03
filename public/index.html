@@ -602,6 +602,13 @@
             </svg>
             Télécharger
           </button>
+          <button class="action-btn" onclick="changerRecto()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Recto
+          </button>
           <button class="action-btn" onclick="changerVerso()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -616,8 +623,10 @@
             Revoir
           </button>
         </div>
+        <input type="file" id="recto-input" accept="image/*" style="display:none">
         <input type="file" id="verso-input" accept="image/*" style="display:none">
       `;
+      document.getElementById('recto-input').addEventListener('change', uploadRecto);
       document.getElementById('verso-input').addEventListener('change', uploadVerso);
     }
 
@@ -638,8 +647,9 @@
       front.classList.toggle('holo', !!t.holo);
       back.classList.toggle('holo', !!t.holo);
 
-      const poster = d.poster
-        ? `<img src="${escapeHtml(d.poster)}" alt="" draggable="false">`
+      const posterSrc = t.recto || d.poster || '';
+      const poster = posterSrc
+        ? `<img src="${escapeHtml(posterSrc)}" alt="" draggable="false">`
         : `🎬`;
       const idShort = (t.ticketId || '').slice(0, 8).toUpperCase();
 
@@ -811,10 +821,9 @@
       }
     }
 
-    // ── Changement du verso ──────────────────────────────────────────
-    function changerVerso() {
-      document.getElementById('verso-input').click();
-    }
+    // ── Changement du recto / verso ──────────────────────────────────
+    function changerRecto() { document.getElementById('recto-input').click(); }
+    function changerVerso() { document.getElementById('verso-input').click(); }
 
     function compressImageFile(file, maxDim = 1400, quality = 0.82) {
       return new Promise((resolve, reject) => {
@@ -834,34 +843,36 @@
       });
     }
 
-    async function uploadVerso(e) {
-      const file = e.target.files[0];
+    async function uploadFace(file, side) {
       if (!file || !currentTicket) return;
       showToast('Compression…');
       try {
         let dataURL = await compressImageFile(file, 1400, 0.82);
         if (dataURL.length > 800000) dataURL = await compressImageFile(file, 1100, 0.7);
-        const res = await apiFetch('/api/collection-verso', {
+        const body = { ticketId: currentTicket.ticketId, [side]: dataURL };
+        const res = await apiFetch(`/api/collection-${side}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ticketId: currentTicket.ticketId, verso: dataURL }),
+          body: JSON.stringify(body),
         });
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));
           throw new Error(d.error || 'Erreur');
         }
-        currentTicket.verso = dataURL;
-        showToast('Verso mis à jour');
-        // Rafraîchit la carte si elle est ouverte
+        currentTicket[side] = dataURL;
+        showToast(`${side.charAt(0).toUpperCase() + side.slice(1)} mis à jour`);
         if (document.getElementById('ticket-modal').classList.contains('active')) {
           await openTicket();
         }
       } catch (err) {
         showToast('Erreur : ' + (err.message || 'inconnue'));
       } finally {
-        e.target.value = '';
+        file = null;
       }
     }
+
+    async function uploadRecto(e) { await uploadFace(e.target.files[0], 'recto'); e.target.value = ''; }
+    async function uploadVerso(e) { await uploadFace(e.target.files[0], 'verso'); e.target.value = ''; }
 
     // ── Revoir l'animation ───────────────────────────────────────────
     function replayAnimation() {
