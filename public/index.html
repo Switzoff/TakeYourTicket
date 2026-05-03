@@ -7,6 +7,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="/auth-init.js"></script>
+  <script src="/badge-render.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -218,26 +219,55 @@
       padding: 80px 20px; color: #555; font-size: 13px;
     }
 
-    /* ── VUE TICKET (modal secondaire) ──────────────────────────────── */
+    /* ── VUE TICKET 3D (modal secondaire) ────────────────────────────── */
     .ticket-modal {
       position: fixed; inset: 0; z-index: 1100;
-      background: rgba(0,0,0,0.92); backdrop-filter: blur(12px);
+      background: rgba(0,0,0,0.94); backdrop-filter: blur(14px);
       display: none; align-items: center; justify-content: center;
       padding: 24px;
-      opacity: 0; transition: opacity 0.25s;
+      opacity: 0; transition: opacity 0.3s;
     }
     .ticket-modal.active { display: flex; opacity: 1; }
-    .ticket-paper {
+
+    .card-stage {
+      position: relative;
       width: 100%; max-width: 340px;
-      background: linear-gradient(180deg, #1c1c1c 0%, #0f0f0f 100%);
-      border: 0.5px solid #333; border-radius: 18px;
-      overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
-      transform: scale(0.9);
-      transition: transform 0.25s;
+      perspective: 1600px;
+      -webkit-perspective: 1600px;
+      touch-action: pan-y;
     }
-    .ticket-modal.active .ticket-paper { transform: scale(1); }
-    .ticket-paper.holo {
+
+    .card-flip {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 2/3;
+      transform-style: preserve-3d;
+      -webkit-transform-style: preserve-3d;
+      transform:
+        scale(var(--enter, 0.88))
+        rotateX(var(--rx, 0deg))
+        rotateY(calc(var(--ry, 0deg) + var(--flip, 0deg)));
+      transition: transform 0.55s cubic-bezier(.2,.85,.25,1);
+      cursor: grab;
+      will-change: transform;
+    }
+    .ticket-modal.active .card-flip { --enter: 1; }
+    .card-flip.dragging { transition: none; cursor: grabbing; }
+    .card-flip.flipped { --flip: 180deg; }
+
+    .card-face {
+      position: absolute; inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 0.5px solid #333;
+      background: linear-gradient(180deg, #1c1c1c 0%, #0f0f0f 100%);
+      box-shadow:
+        0 28px 70px -16px rgba(0,0,0,0.85),
+        0 0 0 0.5px rgba(255,255,255,0.04) inset;
+    }
+    .card-face.holo {
       background:
         linear-gradient(120deg,
           rgba(255,200,255,0.1) 0%,
@@ -248,36 +278,100 @@
         linear-gradient(180deg, #1c1c1c 0%, #0f0f0f 100%);
       border-color: rgba(180,180,255,0.4);
     }
-    .ticket-paper .ticket-poster {
+    .card-back { transform: rotateY(180deg); }
+
+    /* Recto */
+    .card-front .ticket-poster {
       width: 100%; aspect-ratio: 2/3; background: #1a1a1a;
       display: flex; align-items: center; justify-content: center; font-size: 48px;
+      position: absolute; inset: 0;
     }
-    .ticket-paper .ticket-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .ticket-paper .ticket-perforation {
-      height: 1px; background: repeating-linear-gradient(
-        to right, #333 0, #333 6px, transparent 6px, transparent 12px
-      );
+    .card-front .ticket-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-front .ticket-overlay {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: 60px 18px 18px;
+      background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 50%, transparent 100%);
+      color: #fff;
     }
-    .ticket-paper .ticket-body { padding: 18px 20px 22px; }
-    .ticket-paper .t-title { font-size: 16px; font-weight: 700; line-height: 1.3; }
-    .ticket-paper .t-cinema { color: #aaa; font-size: 12px; margin-top: 8px; }
-    .ticket-paper .t-date { color: #fff; font-size: 13px; margin-top: 4px; font-weight: 500; }
-    .ticket-paper .t-id {
+    .card-front .t-title { font-size: 15px; font-weight: 700; line-height: 1.25; }
+    .card-front .t-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 11px; color: #bbb; }
+    .card-front .t-tag {
+      background: rgba(180,180,255,0.18); border: 0.5px solid rgba(180,180,255,0.35);
+      color: #cdf; font-size: 9px; font-weight: 700;
+      padding: 3px 7px; border-radius: 4px; letter-spacing: 1px; text-transform: uppercase;
+    }
+    .card-front .t-id {
+      position: absolute; top: 12px; left: 14px;
       font-family: 'SF Mono', Menlo, monospace; font-size: 9px;
-      color: #555; margin-top: 14px; letter-spacing: 1px;
+      color: rgba(255,255,255,0.55); letter-spacing: 1px;
+      background: rgba(0,0,0,0.55); padding: 3px 7px; border-radius: 4px;
+      backdrop-filter: blur(4px);
     }
-    .ticket-paper .t-tag {
-      display: inline-block; margin-top: 12px;
-      background: rgba(180,180,255,0.15); border: 0.5px solid rgba(180,180,255,0.3);
-      color: #cdf; font-size: 10px; font-weight: 600;
-      padding: 3px 8px; border-radius: 4px; letter-spacing: 1px; text-transform: uppercase;
+
+    /* Verso */
+    .card-back-content {
+      position: absolute; inset: 0;
+      padding: 22px 20px 18px;
+      display: flex; flex-direction: column;
+      gap: 10px;
     }
+    .card-back-head { padding-right: 70px; }
+    .card-back-title { font-size: 15px; font-weight: 700; line-height: 1.25; }
+    .card-back-tagline { font-size: 11px; color: #888; font-style: italic; margin-top: 4px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .card-back-section { margin-top: 4px; }
+    .card-back-label { font-size: 9px; color: #555; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+    .card-back-overview {
+      font-size: 11px; color: #bbb; line-height: 1.55;
+      flex: 1; overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical;
+    }
+    .card-back-cast { display: flex; gap: 6px; overflow: hidden; }
+    .card-back-cast .cast-mini { width: 44px; flex-shrink: 0; }
+    .card-back-cast .cast-mini .photo {
+      width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
+      background: #1a1a1a; border: 0.5px solid #2a2a2a;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .card-back-cast .cast-mini .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-back-cast .cast-mini .name {
+      font-size: 9px; color: #ddd; text-align: center; margin-top: 4px; line-height: 1.2;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .card-back-badge {
+      position: absolute; top: 14px; right: 14px;
+      width: 60px; height: 60px;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+    }
+    .card-back-badge svg { display: block; width: 100%; height: 100%; }
+    .card-back-footer {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      font-size: 10px; color: #777;
+      padding-top: 10px;
+      border-top: 0.5px solid #2a2a2a;
+    }
+    .card-back-footer .id {
+      font-family: 'SF Mono', Menlo, monospace; letter-spacing: 1px; color: #555;
+    }
+
+    .card-hint {
+      position: absolute; left: 50%; bottom: -44px;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.45);
+      font-size: 11px; letter-spacing: 0.6px; white-space: nowrap;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    .ticket-modal.active .card-hint { opacity: 1; transition-delay: 0.7s; }
+
     .ticket-modal-close {
       position: absolute; top: 24px; right: 24px;
       width: 40px; height: 40px; border-radius: 50%;
       background: rgba(255,255,255,0.1); border: 0.5px solid rgba(255,255,255,0.15);
       color: #fff; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
+      z-index: 5;
     }
 
     /* Toast minimaliste */
@@ -323,14 +417,20 @@
     <div id="detail-content"></div>
   </div>
 
-  <!-- Vue ticket "physique" -->
+  <!-- Carte ticket 3D (recto + verso) -->
   <div class="ticket-modal" id="ticket-modal" onclick="closeTicket(event)">
     <button class="ticket-modal-close" onclick="closeTicket()" aria-label="Fermer">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 6L6 18M6 6l12 12"/>
       </svg>
     </button>
-    <div class="ticket-paper" id="ticket-paper" onclick="event.stopPropagation()"></div>
+    <div class="card-stage" id="card-stage" onclick="event.stopPropagation()">
+      <div class="card-flip" id="card-flip">
+        <div class="card-face card-front" id="card-front"></div>
+        <div class="card-face card-back" id="card-back"></div>
+      </div>
+      <div class="card-hint" id="card-hint">Touche ou glisse pour retourner</div>
+    </div>
   </div>
 
   <!-- Lightbox affiche -->
@@ -551,35 +651,174 @@
       `;
     }
 
-    // ── Vue ticket physique ──────────────────────────────────────────
-    function openTicket() {
+    // ── Carte ticket 3D ──────────────────────────────────────────────
+    let userBadges = null;
+    async function getUserBadges() {
+      if (userBadges !== null) return userBadges;
+      try {
+        const r = await apiFetch('/api/profile');
+        const data = await r.json();
+        userBadges = Array.isArray(data.badges) ? data.badges : [];
+      } catch { userBadges = []; }
+      return userBadges;
+    }
+
+    function findBadgeForTicket(ticket) {
+      if (!userBadges) return null;
+      return userBadges.find(b => b.ticketId === ticket.ticketId)
+          || userBadges.find(b => b.filmTitle === ticket.film)
+          || null;
+    }
+
+    async function openTicket() {
       if (!currentTicket) return;
       const t = currentTicket;
       const d = currentDetails || {};
-      const paper = document.getElementById('ticket-paper');
-      paper.classList.toggle('holo', !!t.holo);
+      const front = document.getElementById('card-front');
+      const back = document.getElementById('card-back');
+      const flip = document.getElementById('card-flip');
+
+      // Reset flip + tilt
+      flip.classList.remove('flipped');
+      flip.style.setProperty('--rx', '0deg');
+      flip.style.setProperty('--ry', '0deg');
+
+      front.classList.toggle('holo', !!t.holo);
+      back.classList.toggle('holo', !!t.holo);
 
       const poster = d.poster
-        ? `<img src="${escapeHtml(d.poster)}" alt="">`
+        ? `<img src="${escapeHtml(d.poster)}" alt="" draggable="false">`
         : `🎬`;
+      const idShort = (t.ticketId || '').slice(0, 8).toUpperCase();
 
-      paper.innerHTML = `
+      front.innerHTML = `
         <div class="ticket-poster">${poster}</div>
-        <div class="ticket-perforation"></div>
-        <div class="ticket-body">
+        ${idShort ? `<div class="t-id">#${escapeHtml(idShort)}</div>` : ''}
+        <div class="ticket-overlay">
           <div class="t-title">${escapeHtml(d.title || t.film)}</div>
-          <div class="t-cinema">${escapeHtml(t.cinema || '')}</div>
-          <div class="t-date">${escapeHtml(formatDate(t.date))}</div>
-          ${t.holo ? `<span class="t-tag">Collector</span>` : ''}
-          <div class="t-id">#${escapeHtml((t.ticketId || '').slice(0, 8).toUpperCase())}</div>
+          <div class="t-meta">
+            <span>${escapeHtml(t.cinema || '')} · ${escapeHtml(formatDate(t.date))}</span>
+            ${t.holo ? `<span class="t-tag">Collector</span>` : ''}
+          </div>
         </div>
       `;
+
+      await getUserBadges();
+      const badge = findBadgeForTicket(t);
+      const badgeSvg = (badge && window.renderBadge)
+        ? `<div class="card-back-badge" title="${escapeHtml(badge.name)}">${window.renderBadge(badge, { size: 60, withText: false })}</div>`
+        : '';
+
+      const cast = (d.cast || []).slice(0, 5).map(c => {
+        const photo = c.photo
+          ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy" draggable="false">`
+          : `👤`;
+        return `<div class="cast-mini">
+          <div class="photo">${photo}</div>
+          <div class="name">${escapeHtml(c.name || '')}</div>
+        </div>`;
+      }).join('');
+
+      const overview = d.overview
+        ? `<div class="card-back-section">
+             <div class="card-back-label">Synopsis</div>
+             <div class="card-back-overview">${escapeHtml(d.overview)}</div>
+           </div>`
+        : `<div class="card-back-overview" style="flex:1"></div>`;
+
+      const castSection = cast
+        ? `<div class="card-back-section">
+             <div class="card-back-label">Casting</div>
+             <div class="card-back-cast">${cast}</div>
+           </div>`
+        : '';
+
+      back.innerHTML = `
+        <div class="card-back-content">
+          ${badgeSvg}
+          <div class="card-back-head">
+            <div class="card-back-title">${escapeHtml(d.title || t.film)}</div>
+            ${d.tagline ? `<div class="card-back-tagline">${escapeHtml(d.tagline)}</div>` : ''}
+          </div>
+          ${overview}
+          ${castSection}
+          <div class="card-back-footer">
+            <span>${escapeHtml(t.cinema || '')}<br>${escapeHtml(formatDate(t.date))}</span>
+            ${idShort ? `<span class="id">#${escapeHtml(idShort)}</span>` : ''}
+          </div>
+        </div>
+      `;
+
       document.getElementById('ticket-modal').classList.add('active');
+      bindCard3D();
     }
 
     function closeTicket(e) {
-      if (e && e.target.closest('.ticket-paper')) return;
+      if (e && e.target.closest('.card-stage')) return;
       document.getElementById('ticket-modal').classList.remove('active');
+    }
+
+    // ── Interactions 3D (tilt + flip + swipe) ────────────────────────
+    let cardBound = false;
+    function bindCard3D() {
+      if (cardBound) return;
+      cardBound = true;
+      const stage = document.getElementById('card-stage');
+      const flip = document.getElementById('card-flip');
+      const isCoarse = window.matchMedia('(hover: none)').matches;
+
+      // Tilt au survol (desktop uniquement)
+      if (!isCoarse) {
+        stage.addEventListener('mousemove', (e) => {
+          if (flip.classList.contains('dragging')) return;
+          const rect = flip.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width - 0.5;
+          const y = (e.clientY - rect.top) / rect.height - 0.5;
+          const mul = flip.classList.contains('flipped') ? -1 : 1;
+          flip.style.setProperty('--rx', `${(-y * 8).toFixed(2)}deg`);
+          flip.style.setProperty('--ry', `${(x * 12 * mul).toFixed(2)}deg`);
+        });
+        stage.addEventListener('mouseleave', () => {
+          flip.style.setProperty('--rx', '0deg');
+          flip.style.setProperty('--ry', '0deg');
+        });
+      }
+
+      // Drag/swipe + click pour retourner
+      let pid = null, sx = 0, sy = 0, dragging = false;
+      flip.addEventListener('pointerdown', (e) => {
+        pid = e.pointerId; sx = e.clientX; sy = e.clientY; dragging = false;
+        try { flip.setPointerCapture(pid); } catch {}
+      });
+      flip.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== pid) return;
+        const dx = e.clientX - sx;
+        const dy = e.clientY - sy;
+        if (!dragging && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+          dragging = true;
+          flip.classList.add('dragging');
+        }
+        if (dragging) {
+          const delta = Math.max(-150, Math.min(150, dx * 0.55));
+          flip.style.setProperty('--ry', `${delta}deg`);
+        }
+      });
+      const endDrag = (e) => {
+        if (e.pointerId !== pid) return;
+        try { flip.releasePointerCapture(pid); } catch {}
+        pid = null;
+        flip.classList.remove('dragging');
+        if (dragging) {
+          const dx = e.clientX - sx;
+          flip.style.setProperty('--ry', '0deg');
+          if (Math.abs(dx) > 60) flip.classList.toggle('flipped');
+        } else {
+          flip.classList.toggle('flipped');
+        }
+        dragging = false;
+      };
+      flip.addEventListener('pointerup', endDrag);
+      flip.addEventListener('pointercancel', endDrag);
     }
 
     // ── Partage ──────────────────────────────────────────────────────
@@ -617,13 +856,13 @@
 
     async function downloadTicket() {
       if (!currentTicket) return;
-      openTicket();
+      await openTicket();
       await new Promise(r => setTimeout(r, 100));
 
-      const paper = document.getElementById('ticket-paper');
+      const front = document.getElementById('card-front');
 
       // Convertir l'affiche TMDB en data URL pour éviter le CORS lors du snapshot
-      const img = paper.querySelector('.ticket-poster img');
+      const img = front.querySelector('.ticket-poster img');
       if (img && img.src && !img.src.startsWith('data:')) {
         try {
           const dataURL = await urlToDataURL(img.src);
@@ -632,8 +871,19 @@
         } catch (e) { /* on continue, le poster sera vide */ }
       }
 
+      // Cloner la face recto dans un conteneur sans transform 3D pour html2canvas
+      const clone = front.cloneNode(true);
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:340px;height:510px;border-radius:18px;overflow:hidden;border:0.5px solid #333;background:linear-gradient(180deg,#1c1c1c 0%,#0f0f0f 100%);';
+      if (front.classList.contains('holo')) {
+        wrap.style.background = 'linear-gradient(120deg,rgba(255,200,255,0.1) 0%,rgba(180,220,255,0.08) 25%,rgba(255,255,180,0.1) 50%,rgba(180,255,200,0.08) 75%,rgba(255,200,255,0.1) 100%),linear-gradient(180deg,#1c1c1c 0%,#0f0f0f 100%)';
+      }
+      clone.style.cssText = 'position:absolute;inset:0;backface-visibility:visible;border:none;background:transparent;';
+      wrap.appendChild(clone);
+      document.body.appendChild(wrap);
+
       try {
-        const canvas = await html2canvas(paper, {
+        const canvas = await html2canvas(wrap, {
           backgroundColor: null,
           scale: 2,
         });
@@ -644,6 +894,8 @@
         showToast('Téléchargé');
       } catch (e) {
         showToast('Erreur lors du téléchargement');
+      } finally {
+        wrap.remove();
       }
     }
 
