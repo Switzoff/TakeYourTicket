@@ -162,6 +162,8 @@
     let lastMeta = {};
     let rectoImage = null;
     let versoImage = null;
+    let rectoFile = null;
+    let versoFile = null;
 
     // Fixed position: bottom-left
     const QR_POSITION = 'bottom-left';
@@ -182,12 +184,14 @@
     document.getElementById('recto').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      rectoFile = file;
       rectoImage = await loadImage(file);
       updatePreview();
     });
     document.getElementById('verso').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      versoFile = file;
       versoImage = await loadImage(file);
     });
 
@@ -334,18 +338,35 @@
       status.textContent = 'Génération en cours…';
       status.className = 'status';
 
-      // Compresse recto et verso → base64 envoyés au backend
-      const compressForUpload = (img) => {
-        if (!img) return null;
-        try {
-          let url = compressImageToDataURL(img, 1400, 0.82);
-          if (!url) url = compressImageToDataURL(img, 1100, 0.7);
-          else if (url.length > 800000) url = compressImageToDataURL(img, 1100, 0.7);
-          return url || null;
-        } catch { return null; }
+      // Lit un fichier image en base64, compresse si > 600 KB
+      const fileToUpload = (file) => {
+        if (!file) return Promise.resolve(null);
+        return new Promise((resolve) => {
+          if (file.size <= 600000) {
+            // Petit fichier : lecture directe, pas de canvas
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const url = e.target.result;
+              resolve(url && url.startsWith('data:image/') ? url : null);
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+          } else {
+            // Grand fichier : compression via canvas
+            const img = new Image();
+            img.onload = () => {
+              try {
+                let url = compressImageToDataURL(img, 1400, 0.82);
+                if (!url || url.length > 800000) url = compressImageToDataURL(img, 1000, 0.75);
+                resolve(url || null);
+              } catch { resolve(null); }
+            };
+            img.onerror = () => resolve(null);
+            img.src = URL.createObjectURL(file);
+          }
+        });
       };
-      const recto = compressForUpload(rectoImage);
-      const verso = compressForUpload(versoImage);
+      const [recto, verso] = await Promise.all([fileToUpload(rectoFile), fileToUpload(versoFile)]);
 
       try {
         const res = await apiFetch('/api/generer-tickets', {
