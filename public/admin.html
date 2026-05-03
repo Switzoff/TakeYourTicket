@@ -339,35 +339,49 @@
       status.className = 'status';
 
       // Lit un fichier image en base64, compresse si > 600 KB
-      const fileToUpload = (file) => {
-        if (!file) return Promise.resolve(null);
-        return new Promise((resolve) => {
-          if (file.size <= 600000) {
-            // Petit fichier : lecture directe, pas de canvas
+      // Essaie plusieurs tailles décroissantes en cas d'échec.
+      const fileToUpload = async (file, label) => {
+        if (!file) return null;
+        console.log(`[admin upload ${label}]`, file.name, file.size, 'bytes', file.type);
+        if (file.size <= 600000) {
+          const direct = await new Promise(resolve => {
             const reader = new FileReader();
-            reader.onload = (e) => {
-              const url = e.target.result;
-              resolve(url && url.startsWith('data:image/') ? url : null);
-            };
+            reader.onload = (e) => resolve(e.target.result);
             reader.onerror = () => resolve(null);
             reader.readAsDataURL(file);
-          } else {
-            // Grand fichier : compression via canvas
-            const img = new Image();
-            img.onload = () => {
-              try {
-                let url = compressImageToDataURL(img, 1400, 0.82);
-                if (!url || url.length > 800000) url = compressImageToDataURL(img, 1000, 0.75);
-                resolve(url || null);
-              } catch { resolve(null); }
-            };
-            img.onerror = () => resolve(null);
-            img.src = URL.createObjectURL(file);
+          });
+          if (direct && direct.startsWith('data:image/')) {
+            console.log(`[admin upload ${label}] direct read: ${direct.length} chars`);
+            return direct;
           }
+        }
+        const img = await new Promise(resolve => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => resolve(null);
+          i.src = URL.createObjectURL(file);
         });
+        if (!img) {
+          console.warn(`[admin upload ${label}] image load failed`);
+          return null;
+        }
+        for (const [maxDim, quality] of [[1400, 0.82], [1100, 0.75], [800, 0.7], [600, 0.65]]) {
+          const url = compressImageToDataURL(img, maxDim, quality);
+          if (url && url.length <= 800000) {
+            console.log(`[admin upload ${label}] compressed ${maxDim}px q${quality}: ${url.length} chars`);
+            return url;
+          }
+        }
+        console.warn(`[admin upload ${label}] compression failed at all sizes`);
+        return null;
       };
       try {
-        const [recto, verso] = await Promise.all([fileToUpload(rectoFile), fileToUpload(versoFile)]);
+        const [recto, verso] = await Promise.all([
+          fileToUpload(rectoFile, 'recto'),
+          fileToUpload(versoFile, 'verso'),
+        ]);
+        if (rectoFile && !recto) console.warn('[admin] recto NON inclus dans la requête');
+        if (versoFile && !verso) console.warn('[admin] verso NON inclus dans la requête');
 
         const res = await apiFetch('/api/generer-tickets', {
           method: 'POST',
@@ -379,7 +393,13 @@
         if (!res.ok) throw new Error(data.error || `Erreur HTTP ${res.status}`);
         lastTickets = data.tickets;
         lastMeta = { film, cinema, date, holo };
-        status.textContent = `${data.tickets.length} ticket(s) généré(s)${holo ? ' (HOLO)' : ''}.`;
+        const visuals = [];
+        if (recto) visuals.push('recto ✓');
+        else if (rectoFile) visuals.push('recto ✗');
+        if (verso) visuals.push('verso ✓');
+        else if (versoFile) visuals.push('verso ✗');
+        const visualsTxt = visuals.length ? ` [${visuals.join(', ')}]` : '';
+        status.textContent = `${data.tickets.length} ticket(s) généré(s)${holo ? ' (HOLO)' : ''}.${visualsTxt}`;
         status.className = 'status success';
         document.getElementById('actions').classList.add('visible');
         document.getElementById('qr-grid').innerHTML = '';

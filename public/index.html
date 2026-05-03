@@ -635,8 +635,10 @@
       const flip = document.getElementById('card-flip');
 
       // Charge les visuels du batch si non déjà copiés sur le ticket
+      console.log('[openTicket]', { ticketId: t.ticketId, batchId: t.batchId, hasRecto: !!t.recto, hasVerso: !!t.verso });
       if (t.batchId && (!t.recto || !t.verso)) {
         const assets = await fetchBatchAssets(t.batchId);
+        console.log('[openTicket] fetched assets:', { hasRecto: !!assets.recto, hasVerso: !!assets.verso });
         if (!t.recto && assets.recto) t.recto = assets.recto;
         if (!t.verso && assets.verso) t.verso = assets.verso;
       }
