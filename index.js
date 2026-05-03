@@ -44,7 +44,7 @@ const app = express();
 const TMDB_API_KEY = '6ab36cec6d539dc145a762e4d15524f3';
 const PORT = 3000;
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '4mb' }));
 app.use(express.static('public'));
 
 app.post('/api/generer-tickets', requireAdmin, async (req, res) => {

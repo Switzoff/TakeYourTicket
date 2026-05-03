@@ -366,16 +366,17 @@
           }
         });
       };
-      const [recto, verso] = await Promise.all([fileToUpload(rectoFile), fileToUpload(versoFile)]);
-
       try {
+        const [recto, verso] = await Promise.all([fileToUpload(rectoFile), fileToUpload(versoFile)]);
+
         const res = await apiFetch('/api/generer-tickets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ film, cinema, date, quantite, holo, recto, verso })
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+        let data = {};
+        try { data = await res.json(); } catch { /* réponse non-JSON */ }
+        if (!res.ok) throw new Error(data.error || `Erreur HTTP ${res.status}`);
         lastTickets = data.tickets;
         lastMeta = { film, cinema, date, holo };
         status.textContent = `${data.tickets.length} ticket(s) généré(s)${holo ? ' (HOLO)' : ''}.`;
@@ -385,7 +386,8 @@
 
         document.getElementById('btn-zip').disabled = !rectoImage;
       } catch(e) {
-        status.textContent = 'Erreur : ' + e.message;
+        console.error('[generer]', e);
+        status.textContent = 'Erreur : ' + (e.message || 'inconnue') + ' [' + (e.name || 'Error') + ']';
         status.className = 'status error';
       } finally {
         btn.disabled = false;
