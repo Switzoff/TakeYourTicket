@@ -48,7 +48,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.static('public'));
 
 app.post('/api/generer-tickets', requireAdmin, async (req, res) => {
-  const { film, cinema, date, holo, verso } = req.body;
+  const { film, cinema, date, holo, recto, verso } = req.body;
   const quantite = parseInt(req.body.quantite, 10);
   if (!film || !cinema || !date) {
     return res.status(400).json({ error: 'film, cinema, date requis' });
@@ -59,18 +59,21 @@ app.post('/api/generer-tickets', requireAdmin, async (req, res) => {
   if (String(film).length > 200 || String(cinema).length > 200) {
     return res.status(400).json({ error: 'film/cinema trop long' });
   }
-  if (verso && (typeof verso !== 'string' || verso.length > 800000 || !verso.startsWith('data:image/'))) {
-    return res.status(400).json({ error: 'verso invalide' });
+  for (const [name, val] of [['recto', recto], ['verso', verso]]) {
+    if (val && (typeof val !== 'string' || val.length > 800000 || !val.startsWith('data:image/'))) {
+      return res.status(400).json({ error: name + ' invalide' });
+    }
   }
 
-  // Si un verso est fourni, on le stocke une seule fois dans /batches/{batchId}
-  // et chaque ticket référence ce batchId, pour éviter de dupliquer ~270KB par ticket.
+  // Si recto/verso fournis, on les stocke une fois dans /batches/{batchId}
+  // et chaque ticket référence ce batchId.
   let batchId = null;
-  if (verso) {
+  if (recto || verso) {
     batchId = uuidv4();
-    await db.collection('batches').doc(batchId).set({
-      verso, film, createdAt: new Date(),
-    });
+    const batchData = { film, createdAt: new Date() };
+    if (recto) batchData.recto = recto;
+    if (verso) batchData.verso = verso;
+    await db.collection('batches').doc(batchId).set(batchData);
   }
 
   const ticketsGeneres = [];
@@ -100,11 +103,15 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
   if (ticket.scanne) return res.status(409).json({ error: 'Ticket déjà scanné' });
   await ref.update({ scanne: true, proprietaire: req.uid });
 
-  // Récupère le verso depuis le batch si présent
-  let verso = null;
+  // Récupère recto/verso depuis le batch si présent
+  let recto = null, verso = null;
   if (ticket.batchId) {
     const batchDoc = await db.collection('batches').doc(ticket.batchId).get();
-    if (batchDoc.exists) verso = batchDoc.data().verso || null;
+    if (batchDoc.exists) {
+      const b = batchDoc.data();
+      recto = b.recto || null;
+      verso = b.verso || null;
+    }
   }
 
   await db.collection('collections').add({
@@ -114,6 +121,7 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
     date: ticket.date,
     ticketId: id,
     holo: ticket.holo || false,
+    ...(recto ? { recto } : {}),
     ...(verso ? { verso } : {}),
     createdAt: new Date()
   });
@@ -248,40 +256,6 @@ app.get('/api/collections', requireAuth, async (req, res) => {
   const snapshot = await db.collection('collections').where('uid', '==', req.uid).get();
   const tickets = snapshot.docs.map(doc => doc.data());
   res.json(tickets);
-});
-
-// Mise à jour du verso d'un ticket appartenant à l'utilisateur connecté
-app.post('/api/collection-verso', requireAuth, async (req, res) => {
-  const { ticketId, verso } = req.body;
-  if (!ticketId) return res.status(400).json({ error: 'ticketId requis' });
-  if (typeof verso !== 'string' || verso.length > 800000 || !verso.startsWith('data:image/')) {
-    return res.status(400).json({ error: 'verso invalide' });
-  }
-  const snap = await db.collection('collections')
-    .where('uid', '==', req.uid)
-    .where('ticketId', '==', ticketId)
-    .limit(1)
-    .get();
-  if (snap.empty) return res.status(404).json({ error: 'Ticket introuvable' });
-  await snap.docs[0].ref.update({ verso });
-  res.json({ success: true });
-});
-
-// Mise à jour du recto d'un ticket appartenant à l'utilisateur connecté
-app.post('/api/collection-recto', requireAuth, async (req, res) => {
-  const { ticketId, recto } = req.body;
-  if (!ticketId) return res.status(400).json({ error: 'ticketId requis' });
-  if (typeof recto !== 'string' || recto.length > 800000 || !recto.startsWith('data:image/')) {
-    return res.status(400).json({ error: 'recto invalide' });
-  }
-  const snap = await db.collection('collections')
-    .where('uid', '==', req.uid)
-    .where('ticketId', '==', ticketId)
-    .limit(1)
-    .get();
-  if (snap.empty) return res.status(404).json({ error: 'Ticket introuvable' });
-  await snap.docs[0].ref.update({ recto });
-  res.json({ success: true });
 });
 
 app.get('/api/profile', requireAuth, async (req, res) => {

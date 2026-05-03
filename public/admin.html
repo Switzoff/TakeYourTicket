@@ -309,23 +309,23 @@
       status.textContent = 'Génération en cours…';
       status.className = 'status';
 
-      // Compresse le verso si présent → base64 envoyé au backend
-      let verso = null;
-      if (versoImage) {
+      // Compresse recto et verso → base64 envoyés au backend
+      const compressForUpload = (img) => {
+        if (!img) return null;
         try {
-          verso = compressImageToDataURL(versoImage, 1400, 0.82);
-          if (verso.length > 800000) {
-            // re-comprime plus agressivement si trop gros
-            verso = compressImageToDataURL(versoImage, 1100, 0.7);
-          }
-        } catch (e) { verso = null; }
-      }
+          let url = compressImageToDataURL(img, 1400, 0.82);
+          if (url.length > 800000) url = compressImageToDataURL(img, 1100, 0.7);
+          return url;
+        } catch { return null; }
+      };
+      const recto = compressForUpload(rectoImage);
+      const verso = compressForUpload(versoImage);
 
       try {
         const res = await apiFetch('/api/generer-tickets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ film, cinema, date, quantite, holo, verso })
+          body: JSON.stringify({ film, cinema, date, quantite, holo, recto, verso })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
