@@ -250,6 +250,23 @@ app.get('/api/collections', requireAuth, async (req, res) => {
   res.json(tickets);
 });
 
+// Mise à jour du verso d'un ticket appartenant à l'utilisateur connecté
+app.post('/api/collection-verso', requireAuth, async (req, res) => {
+  const { ticketId, verso } = req.body;
+  if (!ticketId) return res.status(400).json({ error: 'ticketId requis' });
+  if (typeof verso !== 'string' || verso.length > 800000 || !verso.startsWith('data:image/')) {
+    return res.status(400).json({ error: 'verso invalide' });
+  }
+  const snap = await db.collection('collections')
+    .where('uid', '==', req.uid)
+    .where('ticketId', '==', ticketId)
+    .limit(1)
+    .get();
+  if (snap.empty) return res.status(404).json({ error: 'Ticket introuvable' });
+  await snap.docs[0].ref.update({ verso });
+  res.json({ success: true });
+});
+
 app.get('/api/profile', requireAuth, async (req, res) => {
   const doc = await db.collection('profiles').doc(req.uid).get();
   if (!doc.exists) return res.json({});
