@@ -613,6 +613,19 @@
     }
 
     // ── Carte ticket 3D ──────────────────────────────────────────────
+    const batchAssetsCache = new Map();
+    async function fetchBatchAssets(batchId) {
+      if (!batchId) return { recto: null, verso: null };
+      if (batchAssetsCache.has(batchId)) return batchAssetsCache.get(batchId);
+      try {
+        const r = await apiFetch('/api/batch-assets/' + encodeURIComponent(batchId));
+        const d = await r.json();
+        const out = { recto: d.recto || null, verso: d.verso || null };
+        batchAssetsCache.set(batchId, out);
+        return out;
+      } catch { return { recto: null, verso: null }; }
+    }
+
     async function openTicket() {
       if (!currentTicket) return;
       const t = currentTicket;
@@ -620,6 +633,13 @@
       const front = document.getElementById('card-front');
       const back = document.getElementById('card-back');
       const flip = document.getElementById('card-flip');
+
+      // Charge les visuels du batch si non déjà copiés sur le ticket
+      if (t.batchId && (!t.recto || !t.verso)) {
+        const assets = await fetchBatchAssets(t.batchId);
+        if (!t.recto && assets.recto) t.recto = assets.recto;
+        if (!t.verso && assets.verso) t.verso = assets.verso;
+      }
 
       // Reset flip + tilt
       flip.classList.remove('flipped');

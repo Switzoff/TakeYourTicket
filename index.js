@@ -117,6 +117,9 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
     if (versoDoc.exists) verso = versoDoc.data().data || null;
   }
 
+  // On stocke seulement batchId dans collections (pas les images inline)
+  // car Firestore plafonne chaque doc à 1 Mo. Le client ira chercher
+  // les assets via /api/batch-assets/:batchId quand il en a besoin.
   await db.collection('collections').add({
     uid: req.uid,
     film: ticket.film,
@@ -124,8 +127,7 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
     date: ticket.date,
     ticketId: id,
     holo: ticket.holo || false,
-    ...(recto ? { recto } : {}),
-    ...(verso ? { verso } : {}),
+    ...(ticket.batchId ? { batchId: ticket.batchId } : {}),
     createdAt: new Date()
   });
 
@@ -259,6 +261,21 @@ app.get('/api/collections', requireAuth, async (req, res) => {
   const snapshot = await db.collection('collections').where('uid', '==', req.uid).get();
   const tickets = snapshot.docs.map(doc => doc.data());
   res.json(tickets);
+});
+
+// Récupère les visuels recto/verso d'un batch (utilisé pour afficher la carte 3D)
+app.get('/api/batch-assets/:batchId', requireAuth, async (req, res) => {
+  const { batchId } = req.params;
+  if (!batchId) return res.status(400).json({ error: 'batchId requis' });
+  const assetsRef = db.collection('batches').doc(batchId).collection('assets');
+  const [rectoDoc, versoDoc] = await Promise.all([
+    assetsRef.doc('recto').get(),
+    assetsRef.doc('verso').get(),
+  ]);
+  res.json({
+    recto: rectoDoc.exists ? rectoDoc.data().data : null,
+    verso: versoDoc.exists ? versoDoc.data().data : null,
+  });
 });
 
 app.get('/api/profile', requireAuth, async (req, res) => {
