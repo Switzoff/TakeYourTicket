@@ -65,15 +65,17 @@ app.post('/api/generer-tickets', requireAdmin, async (req, res) => {
     }
   }
 
-  // Si recto/verso fournis, on les stocke une fois dans /batches/{batchId}
-  // et chaque ticket référence ce batchId.
+  // Si recto/verso fournis, on les stocke dans des sous-documents séparés
+  // (Firestore limite à 1 Mo par document, donc on évite de tout mettre dans
+  // un seul doc batches/{batchId} qui pourrait dépasser la limite).
   let batchId = null;
   if (recto || verso) {
     batchId = uuidv4();
-    const batchData = { film, createdAt: new Date() };
-    if (recto) batchData.recto = recto;
-    if (verso) batchData.verso = verso;
-    await db.collection('batches').doc(batchId).set(batchData);
+    const batchRef = db.collection('batches').doc(batchId);
+    const writes = [batchRef.set({ film, createdAt: new Date() })];
+    if (recto) writes.push(batchRef.collection('assets').doc('recto').set({ data: recto }));
+    if (verso) writes.push(batchRef.collection('assets').doc('verso').set({ data: verso }));
+    await Promise.all(writes);
   }
 
   const ticketsGeneres = [];
@@ -103,15 +105,16 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
   if (ticket.scanne) return res.status(409).json({ error: 'Ticket déjà scanné' });
   await ref.update({ scanne: true, proprietaire: req.uid });
 
-  // Récupère recto/verso depuis le batch si présent
+  // Récupère recto/verso depuis les sous-documents du batch
   let recto = null, verso = null;
   if (ticket.batchId) {
-    const batchDoc = await db.collection('batches').doc(ticket.batchId).get();
-    if (batchDoc.exists) {
-      const b = batchDoc.data();
-      recto = b.recto || null;
-      verso = b.verso || null;
-    }
+    const assetsRef = db.collection('batches').doc(ticket.batchId).collection('assets');
+    const [rectoDoc, versoDoc] = await Promise.all([
+      assetsRef.doc('recto').get(),
+      assetsRef.doc('verso').get(),
+    ]);
+    if (rectoDoc.exists) recto = rectoDoc.data().data || null;
+    if (versoDoc.exists) verso = versoDoc.data().data || null;
   }
 
   await db.collection('collections').add({
