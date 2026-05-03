@@ -38,16 +38,17 @@ function requireAdmin(req, res, next) {
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const { findBadgeForFilm } = require('./badges');
 
 const app = express();
 const TMDB_API_KEY = '6ab36cec6d539dc145a762e4d15524f3';
 const PORT = 3000;
 
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '4mb' }));
 app.use(express.static('public'));
 
 app.post('/api/generer-tickets', requireAdmin, async (req, res) => {
-  const { film, cinema, date, holo } = req.body;
+  const { film, cinema, date, holo, recto, verso } = req.body;
   const quantite = parseInt(req.body.quantite, 10);
   if (!film || !cinema || !date) {
     return res.status(400).json({ error: 'film, cinema, date requis' });
@@ -58,12 +59,31 @@ app.post('/api/generer-tickets', requireAdmin, async (req, res) => {
   if (String(film).length > 200 || String(cinema).length > 200) {
     return res.status(400).json({ error: 'film/cinema trop long' });
   }
+  for (const [name, val] of [['recto', recto], ['verso', verso]]) {
+    if (val && (typeof val !== 'string' || val.length > 800000 || !val.startsWith('data:image/'))) {
+      return res.status(400).json({ error: name + ' invalide' });
+    }
+  }
+
+  // Si recto/verso fournis, on les stocke dans des sous-documents séparés
+  // (Firestore limite à 1 Mo par document, donc on évite de tout mettre dans
+  // un seul doc batches/{batchId} qui pourrait dépasser la limite).
+  let batchId = null;
+  if (recto || verso) {
+    batchId = uuidv4();
+    const batchRef = db.collection('batches').doc(batchId);
+    const writes = [batchRef.set({ film, createdAt: new Date() })];
+    if (recto) writes.push(batchRef.collection('assets').doc('recto').set({ data: recto }));
+    if (verso) writes.push(batchRef.collection('assets').doc('verso').set({ data: verso }));
+    await Promise.all(writes);
+  }
+
   const ticketsGeneres = [];
   for (let i = 0; i < quantite; i++) {
     const id = uuidv4();
-    await db.collection('tickets').doc(id).set({
-      id, film, cinema, date, scanne: false, proprietaire: null, holo: !!holo
-    });
+    const data = { id, film, cinema, date, scanne: false, proprietaire: null, holo: !!holo };
+    if (batchId) data.batchId = batchId;
+    await db.collection('tickets').doc(id).set(data);
     ticketsGeneres.push(id);
   }
   res.json({ succes: true, tickets: ticketsGeneres });
@@ -84,6 +104,22 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
   const ticket = doc.data();
   if (ticket.scanne) return res.status(409).json({ error: 'Ticket déjà scanné' });
   await ref.update({ scanne: true, proprietaire: req.uid });
+
+  // Récupère recto/verso depuis les sous-documents du batch
+  let recto = null, verso = null;
+  if (ticket.batchId) {
+    const assetsRef = db.collection('batches').doc(ticket.batchId).collection('assets');
+    const [rectoDoc, versoDoc] = await Promise.all([
+      assetsRef.doc('recto').get(),
+      assetsRef.doc('verso').get(),
+    ]);
+    if (rectoDoc.exists) recto = rectoDoc.data().data || null;
+    if (versoDoc.exists) verso = versoDoc.data().data || null;
+  }
+
+  // On stocke seulement batchId dans collections (pas les images inline)
+  // car Firestore plafonne chaque doc à 1 Mo. Le client ira chercher
+  // les assets via /api/batch-assets/:batchId quand il en a besoin.
   await db.collection('collections').add({
     uid: req.uid,
     film: ticket.film,
@@ -91,9 +127,37 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
     date: ticket.date,
     ticketId: id,
     holo: ticket.holo || false,
+    ...(ticket.batchId ? { batchId: ticket.batchId } : {}),
     createdAt: new Date()
   });
-  res.json({ success: true, film: ticket.film, holo: !!ticket.holo });
+
+  // Attribution automatique d'un badge selon le film, en évitant les doublons
+  let unlockedBadge = null;
+  const badge = findBadgeForFilm(ticket.film);
+  if (badge) {
+    const profileRef = db.collection('profiles').doc(req.uid);
+    const profileDoc = await profileRef.get();
+    const existing = profileDoc.exists ? (profileDoc.data().badges || []) : [];
+    if (!existing.some(b => b.id === badge.id)) {
+      const newBadge = {
+        id: badge.id,
+        name: badge.name,
+        icon: badge.icon,
+        color: badge.color || '#2a2a2a',
+        accent: badge.accent || '#d4a017',
+        description: badge.description,
+        ticketId: id,
+        filmTitle: ticket.film,
+        unlockedAt: new Date().toISOString(),
+      };
+      await profileRef.set({
+        badges: admin.firestore.FieldValue.arrayUnion(newBadge),
+      }, { merge: true });
+      unlockedBadge = newBadge;
+    }
+  }
+
+  res.json({ success: true, film: ticket.film, holo: !!ticket.holo, badge: unlockedBadge });
 });
 
 app.get('/collection', (req, res) => {
@@ -131,6 +195,64 @@ app.get('/api/recherche-films', async (req, res) => {
   }
 });
 
+// Fiche détaillée d'un film (synopsis + casting + backdrop) pour la page Collection
+app.get('/api/film-details', async (req, res) => {
+  const title = (req.query.title || '').trim();
+  if (!title) return res.status(400).json({ error: 'title requis' });
+  try {
+    const searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}&language=fr-FR`;
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
+    const movie = (searchData.results || [])[0];
+    if (!movie) return res.json({});
+
+    const [detailsRes, creditsRes] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/movie/${movie.id}?api_key=${TMDB_API_KEY}&language=fr-FR`),
+      fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${TMDB_API_KEY}&language=fr-FR`),
+    ]);
+    const details = await detailsRes.json();
+    const credits = await creditsRes.json();
+
+    res.json({
+      id: details.id,
+      title: details.title || '',
+      tagline: details.tagline || '',
+      overview: details.overview || '',
+      releaseDate: details.release_date || '',
+      runtime: details.runtime || null,
+      genres: (details.genres || []).map(g => g.name),
+      poster: details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : null,
+      backdrop: details.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : null,
+      cast: (credits.cast || []).slice(0, 8).map(c => ({
+        name: c.name,
+        character: c.character,
+        photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : null,
+      })),
+    });
+  } catch (e) {
+    res.json({});
+  }
+});
+
+// Proxy d'images TMDB pour contourner le CORS lors du téléchargement (html2canvas)
+app.get('/api/proxy-image', async (req, res) => {
+  const url = String(req.query.url || '');
+  if (!url.startsWith('https://image.tmdb.org/')) {
+    return res.status(400).json({ error: 'URL non autorisée' });
+  }
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return res.status(r.status).end();
+    res.set('Content-Type', r.headers.get('content-type') || 'image/jpeg');
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cache-Control', 'public, max-age=86400');
+    const buffer = await r.arrayBuffer();
+    res.send(Buffer.from(buffer));
+  } catch (e) {
+    res.status(500).end();
+  }
+});
+
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
@@ -139,6 +261,21 @@ app.get('/api/collections', requireAuth, async (req, res) => {
   const snapshot = await db.collection('collections').where('uid', '==', req.uid).get();
   const tickets = snapshot.docs.map(doc => doc.data());
   res.json(tickets);
+});
+
+// Récupère les visuels recto/verso d'un batch (utilisé pour afficher la carte 3D)
+app.get('/api/batch-assets/:batchId', requireAuth, async (req, res) => {
+  const { batchId } = req.params;
+  if (!batchId) return res.status(400).json({ error: 'batchId requis' });
+  const assetsRef = db.collection('batches').doc(batchId).collection('assets');
+  const [rectoDoc, versoDoc] = await Promise.all([
+    assetsRef.doc('recto').get(),
+    assetsRef.doc('verso').get(),
+  ]);
+  res.json({
+    recto: rectoDoc.exists ? rectoDoc.data().data : null,
+    verso: versoDoc.exists ? versoDoc.data().data : null,
+  });
 });
 
 app.get('/api/profile', requireAuth, async (req, res) => {
@@ -193,6 +330,7 @@ app.get('/api/profile-public', async (req, res) => {
     favoriteFilms: d.favoriteFilms || [],
     favoriteActors: d.favoriteActors || [],
     favoriteQuotes: d.favoriteQuotes || [],
+    badges: d.badges || [],
   });
 });
 
@@ -270,6 +408,11 @@ app.get('/u/:uid', (req, res) => {
 
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/api/badges', (req, res) => {
+  const { BADGES } = require('./badges');
+  res.json(BADGES.map(({ id, name, icon, color, accent, description }) => ({ id, name, icon, color, accent, description })));
 });
 
 app.get('/scan-animation', (req, res) => {

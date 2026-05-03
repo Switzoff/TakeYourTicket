@@ -111,11 +111,77 @@
       from { transform: translateY(16px); opacity: 0; }
       to   { transform: translateY(0);    opacity: 1; }
     }
+
+    .replay-back {
+      position: fixed; top: 20px; left: 20px; z-index: 200;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      color: #fff; cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+    }
+    .replay-back.visible { display: flex; }
+    .replay-back svg { width: 20px; height: 20px; }
+
+    /* ── BADGE DÉBLOQUÉ ───────────────────────────────────────────── */
+    .badge-overlay {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 150;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0 16px max(28px, env(safe-area-inset-bottom));
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.45s ease;
+    }
+    .badge-overlay.show { opacity: 1; }
+    .badge-overlay .label {
+      font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+      color: rgba(255,255,255,0.45); margin-bottom: 8px;
+      transform: translateY(12px); opacity: 0;
+      transition: transform 0.5s ease 0.1s, opacity 0.5s ease 0.1s;
+    }
+    .badge-overlay.show .label { transform: translateY(0); opacity: 1; }
+    .badge-disc {
+      width: clamp(72px, 18vmin, 96px); height: clamp(72px, 18vmin, 96px);
+      position: relative;
+      filter: drop-shadow(0 0 18px rgba(140,100,255,0.45)) drop-shadow(0 0 36px rgba(140,100,255,0.18));
+      transform: scale(0.3) rotate(-30deg);
+      opacity: 0;
+      transition: transform 0.7s cubic-bezier(.34,1.56,.64,1) 0.05s, opacity 0.35s ease 0.05s;
+    }
+    .badge-overlay.show .badge-disc { transform: scale(1) rotate(0); opacity: 1; }
+    .badge-disc svg { width: 100%; height: 100%; display: block; }
+    .badge-disc::after {
+      content: ''; position: absolute; inset: 0; border-radius: 50%;
+      background: linear-gradient(125deg, transparent 35%, rgba(255,255,255,0.28) 50%, transparent 65%);
+      background-size: 200% 200%;
+      mix-blend-mode: overlay;
+      animation: badge-shine 2.6s ease-in-out infinite; animation-delay: 0.7s;
+      pointer-events: none;
+    }
+    @keyframes badge-shine {
+      0%   { background-position: -100% -100%; }
+      50%  { background-position:  100%  100%; }
+      100% { background-position: -100% -100%; }
+    }
+    .badge-overlay .badge-name {
+      margin-top: 10px; font-size: 13px; font-weight: 600;
+      letter-spacing: 0.3px; text-align: center;
+      color: rgba(255,255,255,0.92);
+      transform: translateY(12px); opacity: 0;
+      transition: transform 0.5s ease 0.4s, opacity 0.5s ease 0.4s;
+    }
+    .badge-overlay.show .badge-name { transform: translateY(0); opacity: 1; }
+    .badge-overlay .badge-msg { display: none; }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
   <div class="flash"></div>
+  <button class="replay-back" id="replay-back" onclick="history.back()" aria-label="Retour">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+  </button>
 
   <div class="scene">
     <div class="ticket-wrap" id="card">
@@ -126,19 +192,32 @@
     <div class="title-group">
       <div class="title-label">Ticket collector</div>
       <div class="film-title" id="filmTitle">—</div>
-      <div class="holo-tag" id="holoTag" style="display:none">✦ Holo</div>
     </div>
     <div class="added-msg">✓ Ajouté à ta collection</div>
   </div>
 
+  <!-- Overlay : badge débloqué -->
+  <div class="badge-overlay" id="badgeOverlay">
+    <div class="label">Badge débloqué</div>
+    <div class="badge-disc" id="badgeDisc"></div>
+    <div class="badge-name" id="badgeName"></div>
+    <div class="badge-msg">✓ Ajouté à ta collection</div>
+  </div>
+
+  <script src="/badge-render.js"></script>
   <script>
   // ── PARAMS ──────────────────────────────────────────────────────────────────
   const params = new URLSearchParams(location.search);
   const film = params.get('film') || 'Film';
   const holo = params.get('holo') === 'true';
+  const replay = params.get('replay') === '1';
+  const badgeName = params.get('badgeName') || '';
+  const badgeIcon = params.get('badgeIcon') || '';
+  const badgeColor = params.get('badgeColor') || '';
+  const badgeAccent = params.get('badgeAccent') || '';
+  if (replay) document.getElementById('replay-back').classList.add('visible');
 
   document.getElementById('filmTitle').textContent = film;
-  if (holo) document.getElementById('holoTag').style.display = 'inline-block';
 
   fetch('/api/affiche/' + encodeURIComponent(film))
     .then(r => r.json())
@@ -633,8 +712,23 @@
   };
   (ANIMS[theme] || ANIMS.default)();
 
-  // Redirect vers la collection après l'animation (Spider-Man plus long à cause de la descente)
-  setTimeout(() => { window.location.href = '/'; }, theme === 'spiderman' ? 5400 : 4800);
+  // ── Affichage du badge débloqué ────────────────────────────────────
+  const baseDelay = theme === 'spiderman' ? 4200 : 3600;
+  if (badgeName) {
+    setTimeout(() => {
+      document.getElementById('badgeName').textContent = badgeName;
+      document.getElementById('badgeDisc').innerHTML = window.renderBadge({
+        name: badgeName, icon: badgeIcon, color: badgeColor, accent: badgeAccent,
+      }, { size: 220 });
+      document.getElementById('badgeOverlay').classList.add('show');
+    }, baseDelay);
+  }
+
+  // Redirect vers la collection après l'animation (sauf en mode replay)
+  if (!replay) {
+    const finalDelay = badgeName ? baseDelay + 3500 : (theme === 'spiderman' ? 5400 : 4800);
+    setTimeout(() => { window.location.href = '/'; }, finalDelay);
+  }
   </script>
 </body>
 </html>

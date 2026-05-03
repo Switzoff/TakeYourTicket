@@ -143,6 +143,17 @@
 
     <div class="qr-grid" id="qr-grid"></div>
     <div id="qr-hidden"></div>
+
+    <div class="card" style="margin-top:24px">
+      <div class="card-title">Tester l'animation badge</div>
+      <div class="form">
+        <div class="row">
+          <label>Badge</label>
+          <select id="badge-select"><option value="">Chargement…</option></select>
+        </div>
+        <button class="btn-secondary" onclick="testerBadge()">Lancer l'animation</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -151,6 +162,8 @@
     let lastMeta = {};
     let rectoImage = null;
     let versoImage = null;
+    let rectoFile = null;
+    let versoFile = null;
 
     // Fixed position: bottom-left
     const QR_POSITION = 'bottom-left';
@@ -171,12 +184,14 @@
     document.getElementById('recto').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      rectoFile = file;
       rectoImage = await loadImage(file);
       updatePreview();
     });
     document.getElementById('verso').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      versoFile = file;
       versoImage = await loadImage(file);
     });
 
@@ -263,6 +278,47 @@
       return out;
     }
 
+    function compressImageToDataURL(img, maxDim = 1400, quality = 0.82) {
+      const nw = img.naturalWidth || img.width;
+      const nh = img.naturalHeight || img.height;
+      if (!nw || !nh) return null;
+      const canvas = document.createElement('canvas');
+      const ratio = nw / nh;
+      let w, h;
+      if (ratio > 1) {
+        w = Math.min(maxDim, nw);
+        h = Math.round(w / ratio);
+      } else {
+        h = Math.min(maxDim, nh);
+        w = Math.round(h * ratio);
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const url = canvas.toDataURL('image/jpeg', quality);
+      return url.startsWith('data:image/') ? url : null;
+    }
+
+    function fileToDataURL(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function compressFile(file, maxDim = 1400, quality = 0.82) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const url = compressImageToDataURL(img, maxDim, quality);
+          resolve(url);
+        };
+        img.onerror = () => resolve(null);
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
     async function generer() {
       const film = document.getElementById('film').value.trim();
       const cinema = document.getElementById('cinema').value.trim();
@@ -282,24 +338,76 @@
       status.textContent = 'Génération en cours…';
       status.className = 'status';
 
+      // Lit un fichier image en base64, compresse si > 600 KB
+      // Essaie plusieurs tailles décroissantes en cas d'échec.
+      const fileToUpload = async (file, label) => {
+        if (!file) return null;
+        console.log(`[admin upload ${label}]`, file.name, file.size, 'bytes', file.type);
+        if (file.size <= 600000) {
+          const direct = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+          });
+          if (direct && direct.startsWith('data:image/')) {
+            console.log(`[admin upload ${label}] direct read: ${direct.length} chars`);
+            return direct;
+          }
+        }
+        const img = await new Promise(resolve => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => resolve(null);
+          i.src = URL.createObjectURL(file);
+        });
+        if (!img) {
+          console.warn(`[admin upload ${label}] image load failed`);
+          return null;
+        }
+        for (const [maxDim, quality] of [[1400, 0.82], [1100, 0.75], [800, 0.7], [600, 0.65]]) {
+          const url = compressImageToDataURL(img, maxDim, quality);
+          if (url && url.length <= 800000) {
+            console.log(`[admin upload ${label}] compressed ${maxDim}px q${quality}: ${url.length} chars`);
+            return url;
+          }
+        }
+        console.warn(`[admin upload ${label}] compression failed at all sizes`);
+        return null;
+      };
       try {
+        const [recto, verso] = await Promise.all([
+          fileToUpload(rectoFile, 'recto'),
+          fileToUpload(versoFile, 'verso'),
+        ]);
+        if (rectoFile && !recto) console.warn('[admin] recto NON inclus dans la requête');
+        if (versoFile && !verso) console.warn('[admin] verso NON inclus dans la requête');
+
         const res = await apiFetch('/api/generer-tickets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ film, cinema, date, quantite, holo })
+          body: JSON.stringify({ film, cinema, date, quantite, holo, recto, verso })
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+        let data = {};
+        try { data = await res.json(); } catch { /* réponse non-JSON */ }
+        if (!res.ok) throw new Error(data.error || `Erreur HTTP ${res.status}`);
         lastTickets = data.tickets;
         lastMeta = { film, cinema, date, holo };
-        status.textContent = `${data.tickets.length} ticket(s) généré(s)${holo ? ' (HOLO)' : ''}.`;
+        const visuals = [];
+        if (recto) visuals.push('recto ✓');
+        else if (rectoFile) visuals.push('recto ✗');
+        if (verso) visuals.push('verso ✓');
+        else if (versoFile) visuals.push('verso ✗');
+        const visualsTxt = visuals.length ? ` [${visuals.join(', ')}]` : '';
+        status.textContent = `${data.tickets.length} ticket(s) généré(s)${holo ? ' (HOLO)' : ''}.${visualsTxt}`;
         status.className = 'status success';
         document.getElementById('actions').classList.add('visible');
         document.getElementById('qr-grid').innerHTML = '';
 
         document.getElementById('btn-zip').disabled = !rectoImage;
       } catch(e) {
-        status.textContent = 'Erreur : ' + e.message;
+        console.error('[generer]', e);
+        status.textContent = 'Erreur : ' + (e.message || 'inconnue') + ' [' + (e.name || 'Error') + ']';
         status.className = 'status error';
       } finally {
         btn.disabled = false;
@@ -483,6 +591,32 @@
       const d = new Date(str);
       if (isNaN(d)) return str;
       return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    // Badge test
+    let badgeList = [];
+    async function loadBadges() {
+      try {
+        const res = await fetch('/api/badges');
+        badgeList = await res.json();
+        const sel = document.getElementById('badge-select');
+        sel.innerHTML = badgeList.map(b =>
+          `<option value="${b.id}">${b.icon} ${b.name}</option>`
+        ).join('');
+      } catch {}
+    }
+    loadBadges();
+
+    function testerBadge() {
+      const sel = document.getElementById('badge-select');
+      const badge = badgeList.find(b => b.id === sel.value);
+      if (!badge) return;
+      const url = `/scan-animation?film=Test&holo=false`
+        + `&badgeName=${encodeURIComponent(badge.name)}`
+        + `&badgeIcon=${encodeURIComponent(badge.icon)}`
+        + `&badgeColor=${encodeURIComponent(badge.color || '')}`
+        + `&badgeAccent=${encodeURIComponent(badge.accent || '')}`;
+      window.open(url, '_blank');
     }
   </script>
 </body>
