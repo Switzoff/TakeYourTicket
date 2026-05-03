@@ -7,9 +7,20 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="/auth-init.js"></script>
+  <script src="/badge-render.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 80px; }
+    body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 80px; position: relative; }
+
+    .add-friend-top {
+      position: absolute; top: 16px; left: 16px; z-index: 10;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #161616; border: 0.5px solid #2a2a2a; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    }
+    .add-friend-top:hover { background: #1f1f1f; border-color: #444; }
+    .add-friend-top svg { width: 20px; height: 20px; }
 
     .header { padding: 52px 20px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 
@@ -39,7 +50,6 @@
     }
     .username-input:hover { border-bottom-color: rgba(255,255,255,0.15); }
     .username-input:focus { border-bottom-color: rgba(255,255,255,0.4); }
-    .email { font-size: 12px; color: #555; }
 
     .stats { display: flex; gap: 8px; padding: 0 20px 24px; }
     .stat { flex: 1; background: #161616; border: 0.5px solid #2a2a2a; border-radius: 14px; padding: 14px 12px; text-align: center; }
@@ -345,6 +355,60 @@
     }
     .user-result .add-friend.added { background: #2a2a2a; color: #aaa; }
 
+    .empty-section { color: #555; font-size: 12px; padding: 8px 0; }
+
+    /* ── BADGES ──────────────────────────────────────────────────── */
+    .badges-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    .badge-tile {
+      aspect-ratio: 1; padding: 4px;
+      background: transparent; border: none;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .badge-tile:hover, .badge-tile:active { transform: scale(1.06); }
+    .badge-tile svg { width: 100%; height: 100%; display: block;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5)); }
+
+    .badges-empty {
+      grid-column: 1 / -1; color: #555; font-size: 12px; padding: 12px 0; text-align: center;
+    }
+
+    /* Modal détail badge */
+    .badge-detail-modal {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,0.92); backdrop-filter: blur(12px);
+      display: none; align-items: center; justify-content: center;
+      padding: 24px;
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .badge-detail-modal.active { display: flex; opacity: 1; }
+    .badge-detail-card {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 18px;
+      padding: 28px 24px; max-width: 360px; width: 100%;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      transform: scale(0.92); transition: transform 0.25s;
+    }
+    .badge-detail-modal.active .badge-detail-card { transform: scale(1); }
+    .badge-detail-disc { width: 180px; height: 180px; }
+    .badge-detail-disc svg { width: 100%; height: 100%; display: block;
+      filter: drop-shadow(0 8px 24px rgba(0,0,0,0.6)); }
+    .badge-detail-name { font-size: 18px; font-weight: 700; text-align: center; margin-top: 8px; }
+    .badge-detail-desc { font-size: 13px; color: #aaa; text-align: center; line-height: 1.5; }
+    .badge-detail-meta {
+      width: 100%; margin-top: 8px; padding-top: 14px;
+      border-top: 0.5px solid #2a2a2a;
+      display: flex; flex-direction: column; gap: 6px;
+      font-size: 12px; color: #888;
+    }
+    .badge-detail-meta b { color: #ddd; font-weight: 500; }
+    .badge-detail-close {
+      margin-top: 14px; width: 100%;
+      background: #2a2a2a; color: #fff; border: none; border-radius: 10px;
+      padding: 12px; font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+
     /* Carrousel d'amis */
     .friend-card {
       flex-shrink: 0; width: 76px; cursor: pointer;
@@ -402,6 +466,15 @@
 </head>
 <body>
 
+  <button class="add-friend-top" onclick="openUserSearchModal()" aria-label="Ajouter un ami">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="14" cy="8" r="4"/>
+      <path d="M6 21c0-3.6 3.6-6 8-6s8 2.4 8 6"/>
+      <line x1="2" y1="9" x2="8" y2="9"/>
+      <line x1="5" y1="6" x2="5" y2="12"/>
+    </svg>
+  </button>
+
   <div class="header">
     <div class="avatar-wrap" id="avatar-wrap">
       <div class="avatar-placeholder" id="avatar-placeholder">👤</div>
@@ -410,12 +483,16 @@
     </div>
     <input type="file" id="photo-input" accept="image/*" style="display:none">
     <input type="text" id="username-input" class="username-input" placeholder="Ton nom" maxlength="40">
-    <div class="email" id="email"></div>
   </div>
 
   <div class="stats">
     <div class="stat"><div class="val" id="total">0</div><div class="lbl">Films vus</div></div>
     <div class="stat"><div class="val" id="mois">0</div><div class="lbl">Ce mois</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Badges</div>
+    <div class="badges-grid" id="badges-grid"></div>
   </div>
 
   <div class="section">
@@ -446,6 +523,20 @@
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
       </svg>
     </button>
+  </div>
+
+  <!-- Modal détail badge -->
+  <div class="badge-detail-modal" id="badge-detail-modal" onclick="closeBadgeDetail(event)">
+    <div class="badge-detail-card" onclick="event.stopPropagation()">
+      <div class="badge-detail-disc" id="bd-disc"></div>
+      <div class="badge-detail-name" id="bd-name">—</div>
+      <div class="badge-detail-desc" id="bd-desc"></div>
+      <div class="badge-detail-meta">
+        <div>Débloqué le <b id="bd-date">—</b></div>
+        <div>Avec : <b id="bd-film">—</b></div>
+      </div>
+      <button class="badge-detail-close" onclick="closeBadgeDetail()">Fermer</button>
+    </div>
   </div>
 
   <!-- Modal de recherche d'utilisateurs -->
@@ -625,12 +716,13 @@
           favoriteFilms: (d.favoriteFilms ?? []).map(normalizeFilm),
           favoriteActors: d.favoriteActors ?? [],
           favoriteQuotes: d.favoriteQuotes ?? [],
+          badges: d.badges ?? [],
         };
       } catch (e) {
         profile = {
           displayName: user.displayName || '',
           photoURL: user.photoURL || '',
-          favoriteFilms: [], favoriteActors: [], favoriteQuotes: [],
+          favoriteFilms: [], favoriteActors: [], favoriteQuotes: [], badges: [],
         };
       }
       document.getElementById('username-input').value = profile.displayName;
@@ -641,6 +733,7 @@
         document.getElementById('avatar-placeholder').style.display = 'none';
       }
       renderChips();
+      renderBadges();
     }
 
     async function saveProfile() {
@@ -981,6 +1074,46 @@
       renderChips(); await saveProfile();
     }
 
+    // ── BADGES ───────────────────────────────────────────────────────────
+    function renderBadges() {
+      const grid = document.getElementById('badges-grid');
+      const list = profile.badges || [];
+      if (!list.length) {
+        grid.innerHTML = `<div class="badges-empty">Aucun badge — scanne un ticket pour en débloquer !</div>`;
+        return;
+      }
+      grid.innerHTML = list.map((b, i) => `
+        <button class="badge-tile" onclick="openBadgeDetail(${i})" aria-label="${escapeHtml(b.name)}">
+          ${window.renderBadge(b, { size: 110 })}
+        </button>
+      `).join('');
+    }
+
+    function openBadgeDetail(i) {
+      const b = profile.badges[i];
+      if (!b) return;
+      document.getElementById('bd-disc').innerHTML = window.renderBadge(b, { size: 180 });
+      document.getElementById('bd-name').textContent = b.name || '';
+      document.getElementById('bd-desc').textContent = b.description || '';
+      document.getElementById('bd-film').textContent = b.filmTitle || '—';
+      const date = b.unlockedAt ? new Date(b.unlockedAt) : null;
+      document.getElementById('bd-date').textContent = date && !isNaN(date)
+        ? date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '—';
+      document.getElementById('badge-detail-modal').classList.add('active');
+    }
+
+    function closeBadgeDetail(e) {
+      if (e && e.target.closest('.badge-detail-card')) return;
+      document.getElementById('badge-detail-modal').classList.remove('active');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('badge-detail-modal').classList.contains('active')) {
+        closeBadgeDetail();
+      }
+    });
+
     // ── AMIS ─────────────────────────────────────────────────────────────
     let friends = [];
 
@@ -995,10 +1128,7 @@
           <div class="name">${escapeHtml(f.displayName || 'Sans nom')}</div>
         </a>`;
       }).join('');
-      row.innerHTML = cards + `
-        <button class="fav-add" onclick="openUserSearchModal()" aria-label="Ajouter un ami">
-          <span class="plus">+</span><small>Ajouter</small>
-        </button>`;
+      row.innerHTML = cards || `<div class="empty-section">Aucun ami pour l'instant</div>`;
     }
 
     async function loadFriends() {
@@ -1099,7 +1229,6 @@
         photoURL: firebaseUser.photoURL,
         email: firebaseUser.email,
       };
-      document.getElementById('email').textContent = user.email || '';
       loadProfile();
       loadStats();
       loadFriends();
