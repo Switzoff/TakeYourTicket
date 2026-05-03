@@ -308,51 +308,77 @@
       backdrop-filter: blur(4px);
     }
 
-    /* Verso */
+    /* Verso : visuel ticket collector */
     .card-back-content {
       position: absolute; inset: 0;
-      padding: 22px 20px 18px;
+      overflow: hidden;
+    }
+    .card-back-bg {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+    }
+    .card-back-bg.fallback {
+      filter: blur(24px) saturate(1.4) brightness(0.6);
+      transform: scale(1.2);
+    }
+    .card-back-shade {
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(180deg,
+          rgba(0,0,0,0.55) 0%,
+          rgba(0,0,0,0.15) 30%,
+          rgba(0,0,0,0.15) 70%,
+          rgba(0,0,0,0.75) 100%);
+    }
+    .card-back-overlay {
+      position: absolute; inset: 0;
       display: flex; flex-direction: column;
-      gap: 10px;
+      align-items: center; justify-content: space-between;
+      padding: 26px 22px;
+      color: #fff;
+      text-align: center;
     }
-    .card-back-head { padding-right: 70px; }
-    .card-back-title { font-size: 15px; font-weight: 700; line-height: 1.25; }
-    .card-back-tagline { font-size: 11px; color: #888; font-style: italic; margin-top: 4px;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    .card-back-overlay .top {
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
     }
-    .card-back-section { margin-top: 4px; }
-    .card-back-label { font-size: 9px; color: #555; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
-    .card-back-overview {
-      font-size: 11px; color: #bbb; line-height: 1.55;
-      flex: 1; overflow: hidden;
-      display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical;
+    .card-back-overlay .center {
+      display: flex; flex-direction: column; gap: 6px;
+      align-items: center;
     }
-    .card-back-cast { display: flex; gap: 6px; overflow: hidden; }
-    .card-back-cast .cast-mini { width: 44px; flex-shrink: 0; }
-    .card-back-cast .cast-mini .photo {
-      width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
-      background: #1a1a1a; border: 0.5px solid #2a2a2a;
-      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    .card-back-overlay .center .title {
+      font-size: 26px; font-weight: 900;
+      letter-spacing: 1px; line-height: 1.05;
+      text-transform: uppercase;
+      text-shadow: 0 4px 16px rgba(0,0,0,0.8);
     }
-    .card-back-cast .cast-mini .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .card-back-cast .cast-mini .name {
-      font-size: 9px; color: #ddd; text-align: center; margin-top: 4px; line-height: 1.2;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    .card-back-overlay .center .subtitle {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: #f4d36b;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.6);
     }
-    .card-back-badge {
-      position: absolute; top: 14px; right: 14px;
-      width: 60px; height: 60px;
-      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+    .card-back-overlay .bottom {
+      display: flex; flex-direction: column; gap: 6px;
+      align-items: center;
     }
-    .card-back-badge svg { display: block; width: 100%; height: 100%; }
-    .card-back-footer {
-      display: flex; justify-content: space-between; align-items: flex-end;
-      font-size: 10px; color: #777;
-      padding-top: 10px;
-      border-top: 0.5px solid #2a2a2a;
+    .card-back-overlay .bottom .cinema {
+      font-size: 14px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
     }
-    .card-back-footer .id {
-      font-family: 'SF Mono', Menlo, monospace; letter-spacing: 1px; color: #555;
+    .card-back-overlay .bottom .date {
+      font-size: 10px; color: rgba(255,255,255,0.85);
+      letter-spacing: 1px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    }
+    .card-back-overlay .bottom .warn {
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: rgba(255,255,255,0.75);
+      margin-top: 4px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.6);
     }
 
     .card-hint {
@@ -652,24 +678,6 @@
     }
 
     // ── Carte ticket 3D ──────────────────────────────────────────────
-    let userBadges = null;
-    async function getUserBadges() {
-      if (userBadges !== null) return userBadges;
-      try {
-        const r = await apiFetch('/api/profile');
-        const data = await r.json();
-        userBadges = Array.isArray(data.badges) ? data.badges : [];
-      } catch { userBadges = []; }
-      return userBadges;
-    }
-
-    function findBadgeForTicket(ticket) {
-      if (!userBadges) return null;
-      return userBadges.find(b => b.ticketId === ticket.ticketId)
-          || userBadges.find(b => b.filmTitle === ticket.film)
-          || null;
-    }
-
     async function openTicket() {
       if (!currentTicket) return;
       const t = currentTicket;
@@ -703,48 +711,28 @@
         </div>
       `;
 
-      await getUserBadges();
-      const badge = findBadgeForTicket(t);
-      const badgeSvg = (badge && window.renderBadge)
-        ? `<div class="card-back-badge" title="${escapeHtml(badge.name)}">${window.renderBadge(badge, { size: 60, withText: false })}</div>`
-        : '';
-
-      const cast = (d.cast || []).slice(0, 5).map(c => {
-        const photo = c.photo
-          ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy" draggable="false">`
-          : `👤`;
-        return `<div class="cast-mini">
-          <div class="photo">${photo}</div>
-          <div class="name">${escapeHtml(c.name || '')}</div>
-        </div>`;
-      }).join('');
-
-      const overview = d.overview
-        ? `<div class="card-back-section">
-             <div class="card-back-label">Synopsis</div>
-             <div class="card-back-overview">${escapeHtml(d.overview)}</div>
-           </div>`
-        : `<div class="card-back-overview" style="flex:1"></div>`;
-
-      const castSection = cast
-        ? `<div class="card-back-section">
-             <div class="card-back-label">Casting</div>
-             <div class="card-back-cast">${cast}</div>
-           </div>`
-        : '';
+      // Verso : visuel ticket avec backdrop du film en fond
+      const bgImage = d.backdrop || d.poster || '';
+      const bgClass = d.backdrop ? '' : 'fallback';
+      const titleParts = (d.title || t.film).split(/[:—–-]/);
+      const mainTitle = titleParts[0].trim();
+      const subTitle = titleParts.slice(1).join(' ').trim();
 
       back.innerHTML = `
         <div class="card-back-content">
-          ${badgeSvg}
-          <div class="card-back-head">
-            <div class="card-back-title">${escapeHtml(d.title || t.film)}</div>
-            ${d.tagline ? `<div class="card-back-tagline">${escapeHtml(d.tagline)}</div>` : ''}
-          </div>
-          ${overview}
-          ${castSection}
-          <div class="card-back-footer">
-            <span>${escapeHtml(t.cinema || '')}<br>${escapeHtml(formatDate(t.date))}</span>
-            ${idShort ? `<span class="id">#${escapeHtml(idShort)}</span>` : ''}
+          <div class="card-back-bg ${bgClass}" ${bgImage ? `style="background-image:url('${escapeHtml(bgImage)}')"` : ''}></div>
+          <div class="card-back-shade"></div>
+          <div class="card-back-overlay">
+            <div class="top">Ticket ${t.holo ? 'Collector' : 'Cinéma'}</div>
+            <div class="center">
+              <div class="title">${escapeHtml(mainTitle)}</div>
+              ${subTitle ? `<div class="subtitle">${escapeHtml(subTitle)}</div>` : ''}
+            </div>
+            <div class="bottom">
+              ${t.cinema ? `<div class="cinema">${escapeHtml(t.cinema)}</div>` : ''}
+              <div class="date">${escapeHtml(formatDate(t.date))}</div>
+              <div class="warn">Ticket interdit à la vente</div>
+            </div>
           </div>
         </div>
       `;
