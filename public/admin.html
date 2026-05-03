@@ -274,6 +274,22 @@
       return out;
     }
 
+    function compressImageToDataURL(img, maxDim = 1400, quality = 0.82) {
+      const canvas = document.createElement('canvas');
+      const ratio = img.naturalWidth / img.naturalHeight;
+      let w, h;
+      if (ratio > 1) {
+        w = Math.min(maxDim, img.naturalWidth);
+        h = Math.round(w / ratio);
+      } else {
+        h = Math.min(maxDim, img.naturalHeight);
+        w = Math.round(h * ratio);
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      return canvas.toDataURL('image/jpeg', quality);
+    }
+
     async function generer() {
       const film = document.getElementById('film').value.trim();
       const cinema = document.getElementById('cinema').value.trim();
@@ -293,11 +309,23 @@
       status.textContent = 'Génération en cours…';
       status.className = 'status';
 
+      // Compresse le verso si présent → base64 envoyé au backend
+      let verso = null;
+      if (versoImage) {
+        try {
+          verso = compressImageToDataURL(versoImage, 1400, 0.82);
+          if (verso.length > 800000) {
+            // re-comprime plus agressivement si trop gros
+            verso = compressImageToDataURL(versoImage, 1100, 0.7);
+          }
+        } catch (e) { verso = null; }
+      }
+
       try {
         const res = await apiFetch('/api/generer-tickets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ film, cinema, date, quantite, holo })
+          body: JSON.stringify({ film, cinema, date, quantite, holo, verso })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);

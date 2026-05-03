@@ -48,7 +48,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.static('public'));
 
 app.post('/api/generer-tickets', requireAdmin, async (req, res) => {
-  const { film, cinema, date, holo } = req.body;
+  const { film, cinema, date, holo, verso } = req.body;
   const quantite = parseInt(req.body.quantite, 10);
   if (!film || !cinema || !date) {
     return res.status(400).json({ error: 'film, cinema, date requis' });
@@ -59,12 +59,26 @@ app.post('/api/generer-tickets', requireAdmin, async (req, res) => {
   if (String(film).length > 200 || String(cinema).length > 200) {
     return res.status(400).json({ error: 'film/cinema trop long' });
   }
+  if (verso && (typeof verso !== 'string' || verso.length > 800000 || !verso.startsWith('data:image/'))) {
+    return res.status(400).json({ error: 'verso invalide' });
+  }
+
+  // Si un verso est fourni, on le stocke une seule fois dans /batches/{batchId}
+  // et chaque ticket référence ce batchId, pour éviter de dupliquer ~270KB par ticket.
+  let batchId = null;
+  if (verso) {
+    batchId = uuidv4();
+    await db.collection('batches').doc(batchId).set({
+      verso, film, createdAt: new Date(),
+    });
+  }
+
   const ticketsGeneres = [];
   for (let i = 0; i < quantite; i++) {
     const id = uuidv4();
-    await db.collection('tickets').doc(id).set({
-      id, film, cinema, date, scanne: false, proprietaire: null, holo: !!holo
-    });
+    const data = { id, film, cinema, date, scanne: false, proprietaire: null, holo: !!holo };
+    if (batchId) data.batchId = batchId;
+    await db.collection('tickets').doc(id).set(data);
     ticketsGeneres.push(id);
   }
   res.json({ succes: true, tickets: ticketsGeneres });
@@ -85,6 +99,14 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
   const ticket = doc.data();
   if (ticket.scanne) return res.status(409).json({ error: 'Ticket déjà scanné' });
   await ref.update({ scanne: true, proprietaire: req.uid });
+
+  // Récupère le verso depuis le batch si présent
+  let verso = null;
+  if (ticket.batchId) {
+    const batchDoc = await db.collection('batches').doc(ticket.batchId).get();
+    if (batchDoc.exists) verso = batchDoc.data().verso || null;
+  }
+
   await db.collection('collections').add({
     uid: req.uid,
     film: ticket.film,
@@ -92,6 +114,7 @@ app.post('/api/scan/:id', requireAuth, async (req, res) => {
     date: ticket.date,
     ticketId: id,
     holo: ticket.holo || false,
+    ...(verso ? { verso } : {}),
     createdAt: new Date()
   });
 

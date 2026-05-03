@@ -308,77 +308,12 @@
       backdrop-filter: blur(4px);
     }
 
-    /* Verso : visuel ticket collector */
-    .card-back-content {
+    /* Verso : visuel pur, aucun texte */
+    .card-back-img {
       position: absolute; inset: 0;
-      overflow: hidden;
-    }
-    .card-back-bg {
-      position: absolute; inset: 0;
-      background-size: cover; background-position: center;
-    }
-    .card-back-bg.fallback {
-      filter: blur(24px) saturate(1.4) brightness(0.6);
-      transform: scale(1.2);
-    }
-    .card-back-shade {
-      position: absolute; inset: 0;
-      background:
-        linear-gradient(180deg,
-          rgba(0,0,0,0.55) 0%,
-          rgba(0,0,0,0.15) 30%,
-          rgba(0,0,0,0.15) 70%,
-          rgba(0,0,0,0.75) 100%);
-    }
-    .card-back-overlay {
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: space-between;
-      padding: 26px 22px;
-      color: #fff;
-      text-align: center;
-    }
-    .card-back-overlay .top {
-      font-size: 12px; font-weight: 700;
-      letter-spacing: 3px; text-transform: uppercase;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
-    }
-    .card-back-overlay .center {
-      display: flex; flex-direction: column; gap: 6px;
-      align-items: center;
-    }
-    .card-back-overlay .center .title {
-      font-size: 26px; font-weight: 900;
-      letter-spacing: 1px; line-height: 1.05;
-      text-transform: uppercase;
-      text-shadow: 0 4px 16px rgba(0,0,0,0.8);
-    }
-    .card-back-overlay .center .subtitle {
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: #f4d36b;
-      text-shadow: 0 2px 6px rgba(0,0,0,0.6);
-    }
-    .card-back-overlay .bottom {
-      display: flex; flex-direction: column; gap: 6px;
-      align-items: center;
-    }
-    .card-back-overlay .bottom .cinema {
-      font-size: 14px; font-weight: 700;
-      letter-spacing: 1px; text-transform: uppercase;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
-    }
-    .card-back-overlay .bottom .date {
-      font-size: 10px; color: rgba(255,255,255,0.85);
-      letter-spacing: 1px;
-      text-shadow: 0 1px 4px rgba(0,0,0,0.6);
-    }
-    .card-back-overlay .bottom .warn {
-      font-size: 9px; font-weight: 600;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: rgba(255,255,255,0.75);
-      margin-top: 4px;
-      text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .card-hint {
@@ -711,31 +646,11 @@
         </div>
       `;
 
-      // Verso : visuel ticket avec backdrop du film en fond
-      const bgImage = d.backdrop || d.poster || '';
-      const bgClass = d.backdrop ? '' : 'fallback';
-      const titleParts = (d.title || t.film).split(/[:—–-]/);
-      const mainTitle = titleParts[0].trim();
-      const subTitle = titleParts.slice(1).join(' ').trim();
-
-      back.innerHTML = `
-        <div class="card-back-content">
-          <div class="card-back-bg ${bgClass}" ${bgImage ? `style="background-image:url('${escapeHtml(bgImage)}')"` : ''}></div>
-          <div class="card-back-shade"></div>
-          <div class="card-back-overlay">
-            <div class="top">Ticket ${t.holo ? 'Collector' : 'Cinéma'}</div>
-            <div class="center">
-              <div class="title">${escapeHtml(mainTitle)}</div>
-              ${subTitle ? `<div class="subtitle">${escapeHtml(subTitle)}</div>` : ''}
-            </div>
-            <div class="bottom">
-              ${t.cinema ? `<div class="cinema">${escapeHtml(t.cinema)}</div>` : ''}
-              <div class="date">${escapeHtml(formatDate(t.date))}</div>
-              <div class="warn">Ticket interdit à la vente</div>
-            </div>
-          </div>
-        </div>
-      `;
+      // Verso : visuel uploadé par l'admin, sinon backdrop TMDB. Aucun texte.
+      const versoSrc = t.verso || d.backdrop || d.poster || '';
+      back.innerHTML = versoSrc
+        ? `<img class="card-back-img" src="${escapeHtml(versoSrc)}" alt="" draggable="false">`
+        : '';
 
       document.getElementById('ticket-modal').classList.add('active');
       bindCard3D();
