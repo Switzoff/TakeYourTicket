@@ -355,7 +355,6 @@
 
   <div class="stats">
     <div class="stat"><div class="val" id="total">0</div><div class="lbl">Films vus</div></div>
-    <div class="stat"><div class="val" id="mois">0</div><div class="lbl">Ce mois</div></div>
   </div>
 
   <div class="section-title">Tickets récents</div>
@@ -856,18 +855,12 @@
     async function charger() {
       const grid = document.getElementById('grid');
       const totalEl = document.getElementById('total');
-      const moisEl = document.getElementById('mois');
 
       try {
         const res = await apiFetch('/api/collections');
         const tickets = await res.json();
 
         totalEl.textContent = tickets.length;
-        const now = new Date();
-        moisEl.textContent = tickets.filter(t => {
-          const d = new Date(t.date);
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        }).length;
 
         if (tickets.length === 0) {
           grid.innerHTML = '<div class="empty"><p>Scanne ton premier ticket !</p></div>';

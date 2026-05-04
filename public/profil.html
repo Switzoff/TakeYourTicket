@@ -487,7 +487,6 @@
 
   <div class="stats">
     <div class="stat"><div class="val" id="total">0</div><div class="lbl">Films vus</div></div>
-    <div class="stat"><div class="val" id="mois">0</div><div class="lbl">Ce mois</div></div>
   </div>
 
   <div class="section">
@@ -1214,11 +1213,6 @@
         const res = await apiFetch('/api/collections');
         const tickets = await res.json();
         document.getElementById('total').textContent = tickets.length;
-        const now = new Date();
-        document.getElementById('mois').textContent = tickets.filter(t => {
-          const d = new Date(t.date);
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        }).length;
       } catch (e) { console.error(e); }
     }
 
