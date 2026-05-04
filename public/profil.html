@@ -89,6 +89,18 @@
     .menu-item.danger { color: #e55; }
     .menu-item svg { width: 16px; height: 16px; color: #555; }
 
+    /* Mention TMDB obligatoire */
+    .tmdb-attribution {
+      padding: 24px 20px 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      text-align: center;
+    }
+    .tmdb-logo { display: block; opacity: 0.75; transition: opacity 0.15s; }
+    .tmdb-logo:hover { opacity: 1; }
+    .tmdb-logo svg { width: 80px; height: auto; display: block; }
+    .tmdb-text { color: #555; font-size: 10px; line-height: 1.5; max-width: 320px; }
+    .tmdb-text a { color: #777; text-decoration: underline; }
+
     .bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: #0a0a0a; border-top: 0.5px solid #1e1e1e;
@@ -522,6 +534,23 @@
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
       </svg>
     </button>
+  </div>
+
+  <div class="tmdb-attribution">
+    <a href="https://www.themoviedb.org" target="_blank" rel="noopener" class="tmdb-logo" aria-label="The Movie Database">
+      <svg viewBox="0 0 273.42 79.31" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="tmdb-grad" x1="0" y1="0" x2="100%" y2="0">
+            <stop offset="0" stop-color="#90cea1"/>
+            <stop offset="0.56" stop-color="#3cbec9"/>
+            <stop offset="1" stop-color="#00b3e5"/>
+          </linearGradient>
+        </defs>
+        <rect width="273.42" height="79.31" rx="13" fill="#0d253f"/>
+        <path fill="url(#tmdb-grad)" d="M27.66 53.95V32.13h-7.86v-9.16h26.43v9.16h-7.83v21.82h-10.74zm22.6 0V22.97h15.56q4.74 0 7.32 2.18 2.59 2.18 2.59 6.4 0 2.66-1.38 4.65-1.38 1.99-3.85 2.83v.13q3.04.7 4.59 2.81 1.55 2.11 1.55 5.21 0 4.36-2.96 6.57-2.96 2.21-8.31 2.21h-15.11zm10.74-18.72h2.83q1.55 0 2.4-.65.85-.65.85-1.95 0-1.27-.85-1.91-.85-.65-2.4-.65h-2.83v5.16zm0 11.72h3.65q1.69 0 2.61-.72.92-.72.92-2.13 0-1.4-.92-2.12-.92-.72-2.61-.72h-3.65v5.69zm32.51 7-9.74-30.98h11.04l4.96 19.96h.13l5.36-19.96h11.66l5.4 19.96h.13l4.92-19.96h10.5l-9.74 30.98h-11.5l-5.36-19.59h-.13l-5.32 19.59H93.51zm51.79 0V22.97h15.78q5.92 0 9.62 1.86 3.7 1.86 5.45 5.21 1.74 3.35 1.74 7.9v.79q0 4.55-1.74 7.9-1.74 3.35-5.45 5.21-3.7 1.86-9.62 1.86h-15.78V53.95zm10.74-8.16h4.34q3.04 0 4.45-1.46 1.4-1.46 1.4-4.32v-.66q0-2.86-1.4-4.32-1.4-1.46-4.45-1.46h-4.34V45.79zm26.51 8.16V22.97h11.84l5.71 18.79h.13l5.71-18.79H218V53.95h-9.97V37.71h-.13l-5.18 16.24h-7.62l-5.18-16.24h-.13V53.95h-7.24zm45.36.5q-3.65 0-6.79-1.13-3.13-1.13-5.21-3.04l5.49-6.8q1.27 1.06 3.04 1.69 1.78.62 3.7.62 1.69 0 2.43-.46.74-.46.74-1.13 0-.66-.58-1.07-.58-.41-1.74-.7l-5.31-1.27q-3.7-.92-5.45-3.06-1.74-2.13-1.74-5.31 0-3.34 1.74-5.71 1.74-2.36 4.78-3.6 3.04-1.24 6.84-1.24 3.46 0 6.42.96 2.96.96 4.79 2.51l-4.91 6.97q-1.16-.79-2.69-1.27-1.53-.49-3.27-.49-1.69 0-2.39.41-.7.41-.7 1.07 0 .66.55.99.55.33 1.61.58l5.36 1.32q3.83.96 5.69 3.07 1.86 2.11 1.86 5.36 0 3.34-1.78 5.84-1.78 2.5-4.96 3.86-3.18 1.36-7.16 1.36z"/>
+      </svg>
+    </a>
+    <p class="tmdb-text">Affiches, synopsis et données de casting fournis par <a href="https://www.themoviedb.org" target="_blank" rel="noopener">The Movie Database</a>. Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB.</p>
   </div>
 
   <!-- Modal détail badge -->

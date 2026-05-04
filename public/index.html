@@ -182,6 +182,12 @@
       padding: 4px 20px 8px; scrollbar-width: none;
     }
     .cast-row::-webkit-scrollbar { display: none; }
+
+    .tmdb-credit {
+      text-align: center; color: #444; font-size: 10px;
+      padding: 16px 20px 24px; letter-spacing: 0.3px;
+    }
+    .tmdb-credit a { color: #666; text-decoration: underline; }
     .cast-card { flex-shrink: 0; width: 86px; }
     .cast-card .photo {
       width: 86px; height: 86px; border-radius: 50%; overflow: hidden;
@@ -608,6 +614,8 @@
             Revoir l'animation
           </button>
         </div>
+
+        <div class="tmdb-credit">Données : <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a></div>
       `;
     }
 
