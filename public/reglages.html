@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TakeYourTicket — Réglages</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="/auth-init.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding-bottom: 80px; }
+
+    .topbar { display: flex; align-items: center; gap: 12px; padding: 16px 20px 8px; }
+    .back-btn {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 50%;
+      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #fff;
+    }
+    .back-btn svg { width: 18px; height: 18px; }
+    .topbar h1 { font-size: 12px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #888; }
+
+    .section { padding: 16px 20px 4px; }
+    .section-title { color: #555; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+
+    .card-list { display: flex; flex-direction: column; gap: 6px; }
+    .menu-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 14px;
+      padding: 16px;
+      cursor: pointer; color: #fff; text-decoration: none; font-size: 14px;
+      width: 100%; text-align: left;
+      gap: 10px;
+    }
+    .menu-item .label { display: flex; flex-direction: column; gap: 3px; }
+    .menu-item .hint { color: #666; font-size: 11px; }
+    .menu-item .right { color: #777; font-size: 12px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .menu-item .chev { width: 16px; height: 16px; color: #555; }
+    .menu-item.danger { color: #e55; }
+    .menu-item.disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .info-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 14px;
+      padding: 16px; font-size: 14px; color: #fff;
+    }
+    .info-row .val { color: #777; font-size: 13px; user-select: text; -webkit-user-select: text; }
+
+    .toast {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1a1a1a; border: 0.5px solid #333; border-radius: 12px;
+      padding: 12px 18px; font-size: 13px; color: #fff;
+      opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none;
+      z-index: 1200;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { color: #e55; }
+    .toast.success { color: #4caf50; }
+
+    /* Modal générique */
+    .modal {
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+      display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .modal.active { display: flex; }
+    .modal-card {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 16px;
+      padding: 22px; max-width: 380px; width: 100%;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .modal-title { font-size: 15px; font-weight: 600; }
+    .modal-text { font-size: 13px; color: #aaa; line-height: 1.5; }
+    .modal-text b { color: #fff; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .modal-btn {
+      flex: 1; padding: 12px; border-radius: 10px; border: none;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+    .modal-btn.cancel { background: #2a2a2a; color: #fff; }
+    .modal-btn.confirm { background: #fff; color: #000; }
+    .modal-btn.danger { background: #e55; color: #fff; }
+    .modal input[type=text] {
+      background: #0a0a0a; border: 0.5px solid #333; border-radius: 8px;
+      padding: 12px; color: #fff; font-size: 14px; width: 100%;
+      outline: none;
+    }
+    .modal input[type=text]:focus { border-color: #555; }
+
+    /* Choice modal (radio list) */
+    .choice-list { display: flex; flex-direction: column; gap: 6px; }
+    .choice {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #1d1d1d; border: 0.5px solid #2a2a2a; border-radius: 10px;
+      padding: 14px;
+      cursor: pointer;
+    }
+    .choice .lbl { display: flex; flex-direction: column; gap: 3px; }
+    .choice .lbl-title { font-size: 14px; color: #fff; }
+    .choice .lbl-hint { font-size: 11px; color: #777; }
+    .choice .radio {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 1.5px solid #555; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .choice.selected .radio { border-color: #fff; }
+    .choice.selected .radio::after {
+      content: ''; width: 9px; height: 9px; border-radius: 50%; background: #fff;
+    }
+
+    /* Blocked users list */
+    .blocked-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+    .blocked-item {
+      display: flex; align-items: center; gap: 10px;
+      background: #1d1d1d; border: 0.5px solid #2a2a2a; border-radius: 10px;
+      padding: 10px;
+    }
+    .blocked-item .avatar {
+      width: 36px; height: 36px; border-radius: 50%; overflow: hidden; background: #2a2a2a; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+    }
+    .blocked-item .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .blocked-item .name { flex: 1; font-size: 13px; color: #ddd; }
+    .blocked-item .unblock-btn {
+      background: transparent; border: 0.5px solid #444; color: #ddd;
+      padding: 6px 10px; border-radius: 8px; font-size: 11px; cursor: pointer;
+    }
+    .blocked-item .unblock-btn:hover { background: #2a2a2a; }
+    .blocked-empty { text-align: center; color: #555; font-size: 12px; padding: 20px; }
+
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #0a0a0a; border-top: 0.5px solid #1e1e1e;
+      display: flex; padding: 12px 0 24px;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      text-decoration: none; color: #555; font-size: 10px;
+    }
+    .nav-item.active { color: #fff; }
+    .nav-item svg { width: 22px; height: 22px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back-btn" href="/profil" aria-label="Retour">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+    </a>
+    <h1>Réglages</h1>
+  </div>
+
+  <!-- Compte -->
+  <div class="section">
+    <div class="section-title">Compte</div>
+    <div class="card-list">
+      <div class="info-row">
+        <span>Email</span>
+        <span class="val" id="email-val">—</span>
+      </div>
+      <button class="menu-item danger" onclick="askDeleteAccount()">
+        <span class="label">Supprimer mon compte</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Confidentialité -->
+  <div class="section">
+    <div class="section-title">Confidentialité</div>
+    <div class="card-list">
+      <button class="menu-item" onclick="openVisibilityModal()">
+        <span class="label">
+          Visibilité du profil
+          <span class="hint">Qui peut voir ton profil</span>
+        </span>
+        <span class="right">
+          <span id="visibility-val">—</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </span>
+      </button>
+      <button class="menu-item" onclick="openFriendRequestsModal()">
+        <span class="label">
+          Demandes d'ami
+          <span class="hint">Qui peut t'ajouter en ami</span>
+        </span>
+        <span class="right">
+          <span id="friendreq-val">—</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </span>
+      </button>
+      <button class="menu-item" onclick="openBlockedModal()">
+        <span class="label">
+          Utilisateurs bloqués
+          <span class="hint" id="blocked-count">0 bloqué</span>
+        </span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div class="section">
+    <div class="section-title">Notifications</div>
+    <div class="card-list">
+      <button class="menu-item disabled" disabled>
+        <span class="label">
+          Nouvelles fonctionnalités
+          <span class="hint">Disponible prochainement</span>
+        </span>
+      </button>
+      <button class="menu-item disabled" disabled>
+        <span class="label">
+          Activité des amis
+          <span class="hint">Disponible prochainement</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Données -->
+  <div class="section">
+    <div class="section-title">Données</div>
+    <div class="card-list">
+      <button class="menu-item" onclick="exportCollectionPDF()">
+        <span class="label">
+          Exporter ma collection (PDF)
+        </span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <button class="menu-item" onclick="exportCollectionCSV()">
+        <span class="label">
+          Exporter ma collection (CSV)
+        </span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <button class="menu-item" onclick="exportAllData()">
+        <span class="label">
+          Télécharger toutes mes données
+          <span class="hint">Export complet RGPD (JSON)</span>
+        </span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <button class="menu-item" onclick="clearLocalCache()">
+        <span class="label">
+          Vider le cache local
+          <span class="hint">Préférences et données temporaires</span>
+        </span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Informations -->
+  <div class="section">
+    <div class="section-title">Informations</div>
+    <div class="card-list">
+      <div class="info-row">
+        <span>Version</span>
+        <span class="val">1.0.0</span>
+      </div>
+      <a class="menu-item" href="/cgu" target="_blank">
+        <span class="label">Conditions d'utilisation</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </a>
+      <a class="menu-item" href="/confidentialite" target="_blank">
+        <span class="label">Politique de confidentialité</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </a>
+      <a class="menu-item" id="support-link" href="mailto:support@takeyourticket.app">
+        <span class="label">Contacter le support</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <!-- Modal visibilité -->
+  <div class="modal" id="visibility-modal" onclick="closeModal('visibility-modal', event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-title">Visibilité du profil</div>
+      <div class="choice-list">
+        <div class="choice" data-value="public" onclick="pickVisibility('public')">
+          <div class="lbl">
+            <div class="lbl-title">Public</div>
+            <div class="lbl-hint">Tout le monde peut voir ton profil</div>
+          </div>
+          <div class="radio"></div>
+        </div>
+        <div class="choice" data-value="friends" onclick="pickVisibility('friends')">
+          <div class="lbl">
+            <div class="lbl-title">Amis seulement</div>
+            <div class="lbl-hint">Seuls tes amis voient ton profil complet</div>
+          </div>
+          <div class="radio"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal demandes d'ami -->
+  <div class="modal" id="friendreq-modal" onclick="closeModal('friendreq-modal', event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-title">Demandes d'ami</div>
+      <div class="choice-list">
+        <div class="choice" data-value="everyone" onclick="pickFriendRequests('everyone')">
+          <div class="lbl">
+            <div class="lbl-title">Tout le monde</div>
+            <div class="lbl-hint">Tu apparais dans la recherche</div>
+          </div>
+          <div class="radio"></div>
+        </div>
+        <div class="choice" data-value="nobody" onclick="pickFriendRequests('nobody')">
+          <div class="lbl">
+            <div class="lbl-title">Personne</div>
+            <div class="lbl-hint">Personne ne peut t'ajouter en ami</div>
+          </div>
+          <div class="radio"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal utilisateurs bloqués -->
+  <div class="modal" id="blocked-modal" onclick="closeModal('blocked-modal', event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-title">Utilisateurs bloqués</div>
+      <div class="blocked-list" id="blocked-list">
+        <div class="blocked-empty">Chargement…</div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeModal('blocked-modal')">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal suppression compte -->
+  <div class="modal" id="delete-modal" onclick="closeModal('delete-modal', event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-title">Supprimer mon compte ?</div>
+      <div class="modal-text">
+        Cette action est <b>définitive</b>. Tu vas perdre :
+        <br>• Ta collection de tickets
+        <br>• Tes badges
+        <br>• Ton profil et tes préférences
+        <br><br>Pour confirmer, tape <b>SUPPRIMER</b> ci-dessous.
+      </div>
+      <input type="text" id="delete-confirm" placeholder="SUPPRIMER" autocomplete="off">
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeModal('delete-modal')">Annuler</button>
+        <button class="modal-btn danger" id="delete-btn" onclick="confirmDeleteAccount()">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <nav class="bottom-nav">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      Collection
+    </a>
+    <a href="/scanner" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M3 9V6a1 1 0 0 1 1-1h3M15 5h3a1 1 0 0 1 1 1v3M21 15v3a1 1 0 0 1-1 1h-3M9 19H6a1 1 0 0 1-1-1v-3"/>
+      </svg>
+      Scanner
+    </a>
+    <a href="/profil" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      </svg>
+      Profil
+    </a>
+  </nav>
+
+  <script>
+    let profile = { visibility: 'public', friendRequests: 'everyone' };
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (type ? ' ' + type : '');
+      setTimeout(() => { t.className = 'toast'; }, 2400);
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id, e) {
+      if (e && e.target.closest('.modal-card')) return;
+      document.getElementById(id).classList.remove('active');
+    }
+
+    // ── Chargement initial ────────────────────────────────────────────
+    async function loadSettings() {
+      const user = await window.authReady;
+      document.getElementById('email-val').textContent = user.email || '—';
+      try {
+        const res = await apiFetch('/api/profile');
+        const data = await res.json();
+        profile.visibility = data.visibility === 'friends' ? 'friends' : 'public';
+        profile.friendRequests = data.friendRequests === 'nobody' ? 'nobody' : 'everyone';
+        refreshLabels();
+      } catch (e) { console.error(e); }
+      try {
+        const res = await apiFetch('/api/blocks');
+        const blocked = await res.json();
+        document.getElementById('blocked-count').textContent =
+          blocked.length === 0 ? '0 bloqué'
+          : blocked.length === 1 ? '1 bloqué' : `${blocked.length} bloqués`;
+      } catch {}
+    }
+
+    function refreshLabels() {
+      document.getElementById('visibility-val').textContent =
+        profile.visibility === 'friends' ? 'Amis seulement' : 'Public';
+      document.getElementById('friendreq-val').textContent =
+        profile.friendRequests === 'nobody' ? 'Personne' : 'Tout le monde';
+    }
+
+    // ── Visibilité ────────────────────────────────────────────────────
+    function openVisibilityModal() {
+      document.querySelectorAll('#visibility-modal .choice').forEach(el => {
+        el.classList.toggle('selected', el.dataset.value === profile.visibility);
+      });
+      openModal('visibility-modal');
+    }
+
+    async function pickVisibility(value) {
+      profile.visibility = value;
+      refreshLabels();
+      closeModal('visibility-modal');
+      try {
+        await apiFetch('/api/profile/privacy', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visibility: value }),
+        });
+        showToast('Visibilité mise à jour', 'success');
+      } catch { showToast('Erreur', 'error'); }
+    }
+
+    // ── Demandes d'ami ────────────────────────────────────────────────
+    function openFriendRequestsModal() {
+      document.querySelectorAll('#friendreq-modal .choice').forEach(el => {
+        el.classList.toggle('selected', el.dataset.value === profile.friendRequests);
+      });
+      openModal('friendreq-modal');
+    }
+
+    async function pickFriendRequests(value) {
+      profile.friendRequests = value;
+      refreshLabels();
+      closeModal('friendreq-modal');
+      try {
+        await apiFetch('/api/profile/privacy', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ friendRequests: value }),
+        });
+        showToast('Préférence mise à jour', 'success');
+      } catch { showToast('Erreur', 'error'); }
+    }
+
+    // ── Utilisateurs bloqués ──────────────────────────────────────────
+    async function openBlockedModal() {
+      openModal('blocked-modal');
+      const list = document.getElementById('blocked-list');
+      list.innerHTML = '<div class="blocked-empty">Chargement…</div>';
+      try {
+        const res = await apiFetch('/api/blocks');
+        const blocked = await res.json();
+        if (!blocked.length) {
+          list.innerHTML = '<div class="blocked-empty">Aucun utilisateur bloqué</div>';
+          return;
+        }
+        list.innerHTML = blocked.map(b => `
+          <div class="blocked-item" data-uid="${escapeHtml(b.uid)}">
+            <div class="avatar">${b.photoURL ? `<img src="${escapeHtml(b.photoURL)}" alt="">` : '👤'}</div>
+            <div class="name">${escapeHtml(b.displayName || '(sans nom)')}</div>
+            <button class="unblock-btn" onclick="unblockUser('${escapeHtml(b.uid)}')">Débloquer</button>
+          </div>
+        `).join('');
+      } catch {
+        list.innerHTML = '<div class="blocked-empty">Erreur de chargement</div>';
+      }
+    }
+
+    async function unblockUser(uid) {
+      try {
+        await apiFetch('/api/blocks/' + encodeURIComponent(uid), { method: 'DELETE' });
+        showToast('Utilisateur débloqué', 'success');
+        openBlockedModal();
+        loadSettings();
+      } catch { showToast('Erreur', 'error'); }
+    }
+
+    // ── Export collection ─────────────────────────────────────────────
+    function downloadBlob(blob, filename) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    async function exportCollectionCSV() {
+      try {
+        const res = await apiFetch('/api/collections');
+        const tickets = await res.json();
+        if (!tickets.length) return showToast('Aucun ticket à exporter', 'error');
+        const header = ['film', 'cinema', 'date', 'collector'];
+        const rows = tickets.map(t => header.map(k => {
+          const v = k === 'collector' ? (t.holo ? 'oui' : 'non') : (t[k] ?? '');
+          return `"${String(v).replace(/"/g, '""')}"`;
+        }).join(','));
+        const csv = '﻿' + header.join(',') + '\n' + rows.join('\n');
+        downloadBlob(new Blob([csv], { type: 'text/csv' }), `collection-${Date.now()}.csv`);
+        showToast('CSV téléchargé', 'success');
+      } catch { showToast('Erreur', 'error'); }
+    }
+
+    async function exportCollectionPDF() {
+      // Charge jsPDF à la demande
+      if (!window.jspdf) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        }).catch(() => null);
+      }
+      if (!window.jspdf) return showToast('Erreur de chargement', 'error');
+      try {
+        const res = await apiFetch('/api/collections');
+        const tickets = await res.json();
+        if (!tickets.length) return showToast('Aucun ticket à exporter', 'error');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        pdf.setFont(undefined, 'bold').setFontSize(18);
+        pdf.text('Ma collection TakeYourTicket', 20, 25);
+        pdf.setFont(undefined, 'normal').setFontSize(10).setTextColor(120);
+        pdf.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')} — ${tickets.length} ticket(s)`, 20, 32);
+        let y = 45;
+        pdf.setTextColor(0);
+        const sorted = [...tickets].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+        sorted.forEach((t, i) => {
+          if (y > 275) { pdf.addPage(); y = 25; }
+          pdf.setFont(undefined, 'bold').setFontSize(11);
+          pdf.text(`${i + 1}. ${t.film}${t.holo ? ' [COLLECTOR]' : ''}`, 20, y);
+          pdf.setFont(undefined, 'normal').setFontSize(9).setTextColor(110);
+          pdf.text(`${t.cinema}  •  ${new Date(t.date).toLocaleDateString('fr-FR')}`, 20, y + 5);
+          pdf.setTextColor(0);
+          y += 14;
+        });
+        pdf.save(`collection-${Date.now()}.pdf`);
+        showToast('PDF téléchargé', 'success');
+      } catch (e) {
+        console.error(e);
+        showToast('Erreur', 'error');
+      }
+    }
+
+    async function exportAllData() {
+      try {
+        const res = await apiFetch('/api/export-data');
+        const data = await res.json();
+        downloadBlob(
+          new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+          `takeyourticket-export-${Date.now()}.json`
+        );
+        showToast('Export téléchargé', 'success');
+      } catch { showToast('Erreur', 'error'); }
+    }
+
+    function clearLocalCache() {
+      const keep = ['user'];
+      const saved = {};
+      keep.forEach(k => { const v = localStorage.getItem(k); if (v) saved[k] = v; });
+      localStorage.clear();
+      Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
+      showToast('Cache local vidé', 'success');
+    }
+
+    // ── Suppression du compte ─────────────────────────────────────────
+    function askDeleteAccount() {
+      document.getElementById('delete-confirm').value = '';
+      openModal('delete-modal');
+    }
+
+    async function confirmDeleteAccount() {
+      const input = document.getElementById('delete-confirm').value.trim();
+      if (input !== 'SUPPRIMER') {
+        return showToast('Tape SUPPRIMER pour confirmer', 'error');
+      }
+      const btn = document.getElementById('delete-btn');
+      btn.disabled = true; btn.textContent = 'Suppression…';
+      try {
+        const res = await apiFetch('/api/account', { method: 'DELETE' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await firebase.auth().signOut().catch(() => {});
+        localStorage.clear();
+        location.href = '/login';
+      } catch (e) {
+        btn.disabled = false; btn.textContent = 'Supprimer';
+        showToast('Échec de la suppression', 'error');
+      }
+    }
+
+    window.authReady.then(() => loadSettings());
+  </script>
+</body>
+</html>

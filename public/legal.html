@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TakeYourTicket — Mentions légales</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0a; color: #ddd;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 40px 20px 80px;
+      line-height: 1.6;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    .back {
+      display: inline-block; margin-bottom: 24px;
+      color: #777; font-size: 12px; text-decoration: none;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .back:hover { color: #fff; }
+    h1 { font-size: 22px; margin-bottom: 8px; color: #fff; }
+    .muted { color: #555; font-size: 12px; margin-bottom: 28px; }
+    h2 {
+      font-size: 14px; color: #fff; margin: 28px 0 10px;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    p { font-size: 14px; margin-bottom: 12px; }
+    ul { padding-left: 20px; margin-bottom: 12px; font-size: 14px; }
+    li { margin-bottom: 6px; }
+    .placeholder {
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 12px;
+      padding: 20px; margin-top: 24px; color: #888; font-size: 13px;
+    }
+    a { color: #777; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/reglages" class="back">← Retour</a>
+    <h1 id="page-title">Document légal</h1>
+    <div class="muted" id="page-date">Dernière mise à jour : à compléter</div>
+
+    <div id="page-content"></div>
+
+    <div class="placeholder">
+      Ce document est un modèle générique fourni à titre indicatif. Avant toute mise en production publique, il doit être relu et adapté par un professionnel du droit, en particulier pour la conformité RGPD.
+    </div>
+  </div>
+
+  <script>
+    const path = location.pathname;
+    const TODAY = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const PAGES = {
+      '/cgu': {
+        title: "Conditions d'utilisation",
+        html: `
+          <h2>1. Objet</h2>
+          <p>TakeYourTicket est une application qui permet aux utilisateurs de scanner des QR codes liés à des séances de cinéma pour constituer une collection numérique de tickets et débloquer des badges.</p>
+
+          <h2>2. Compte utilisateur</h2>
+          <p>L'inscription se fait via Google Sign-In. L'utilisateur s'engage à fournir des informations exactes et à ne pas se faire passer pour quelqu'un d'autre.</p>
+
+          <h2>3. Utilisation acceptable</h2>
+          <ul>
+            <li>Ne pas utiliser le service à des fins illégales</li>
+            <li>Ne pas tenter d'accéder à des données auxquelles vous n'avez pas droit</li>
+            <li>Ne pas perturber le fonctionnement du service</li>
+          </ul>
+
+          <h2>4. Contenu</h2>
+          <p>Les affiches, synopsis et données de casting sont fournis par <a href="https://www.themoviedb.org" target="_blank">The Movie Database (TMDB)</a>. Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB.</p>
+
+          <h2>5. Suspension / suppression</h2>
+          <p>Nous nous réservons le droit de suspendre ou supprimer un compte en cas de violation de ces conditions.</p>
+
+          <h2>6. Modifications</h2>
+          <p>Ces conditions peuvent évoluer. Les utilisateurs seront informés des changements importants.</p>
+        `
+      },
+      '/confidentialite': {
+        title: "Politique de confidentialité",
+        html: `
+          <h2>1. Données collectées</h2>
+          <ul>
+            <li><b>Identifiants Google</b> : email, nom, photo de profil</li>
+            <li><b>Données du profil</b> : nom d'affichage, films / acteurs / répliques préférés, badges</li>
+            <li><b>Collection</b> : tickets scannés (film, cinéma, date)</li>
+            <li><b>Relations</b> : amis, utilisateurs bloqués</li>
+          </ul>
+
+          <h2>2. Finalité</h2>
+          <p>Ces données servent uniquement à faire fonctionner l'application : afficher ta collection, te suggérer des films, gérer tes amis. Aucune donnée n'est revendue à des tiers.</p>
+
+          <h2>3. Hébergement</h2>
+          <p>Les données sont stockées sur Google Firebase (Firestore et Authentication). L'application est hébergée sur Railway.</p>
+
+          <h2>4. Tes droits (RGPD)</h2>
+          <p>Conformément au RGPD, tu disposes des droits suivants :</p>
+          <ul>
+            <li><b>Accès</b> : voir toutes les données te concernant (via Réglages → Télécharger toutes mes données)</li>
+            <li><b>Rectification</b> : modifier ton profil à tout moment</li>
+            <li><b>Effacement</b> : supprimer ton compte (via Réglages → Supprimer mon compte)</li>
+            <li><b>Portabilité</b> : exporter ta collection en PDF, CSV ou JSON</li>
+          </ul>
+
+          <h2>5. Cookies / stockage local</h2>
+          <p>L'application utilise le stockage local du navigateur pour conserver ta session. Aucun cookie de tracking publicitaire n'est utilisé.</p>
+
+          <h2>6. Contact</h2>
+          <p>Pour toute question relative à tes données, contacte le support depuis la page Réglages.</p>
+        `
+      }
+    };
+
+    const page = PAGES[path] || { title: 'Document non trouvé', html: '<p>Cette page n\\'existe pas.</p>' };
+    document.getElementById('page-title').textContent = page.title;
+    document.getElementById('page-date').textContent = 'Dernière mise à jour : ' + TODAY;
+    document.getElementById('page-content').innerHTML = page.html;
+    document.title = 'TakeYourTicket — ' + page.title;
+  </script>
+</body>
+</html>

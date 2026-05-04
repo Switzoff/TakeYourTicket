@@ -44,6 +44,19 @@
     .friend-btn.remove { background: #2a2a2a; color: #fff; border: 0.5px solid #444; }
     .friend-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+    .block-btn {
+      width: 100%; padding: 12px; margin-top: 8px;
+      background: transparent; color: #999; border: 0.5px solid #333; border-radius: 12px;
+      font-size: 13px; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .block-btn:hover { color: #e55; border-color: #e55; }
+    .private-banner {
+      margin: 0 20px 16px; padding: 16px;
+      background: #161616; border: 0.5px solid #2a2a2a; border-radius: 12px;
+      text-align: center; color: #888; font-size: 13px;
+    }
+
     .section { padding: 0 20px 16px; }
     .section-title { color: #555; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
 
@@ -145,6 +158,11 @@
 
   <div class="friend-action" id="friend-action" style="display:none">
     <button class="friend-btn" id="friend-btn">Ajouter en ami</button>
+    <button class="block-btn" id="block-btn" onclick="askBlock()">Bloquer</button>
+  </div>
+
+  <div class="private-banner" id="private-banner" style="display:none">
+    Ce profil est privé.
   </div>
 
   <div class="section">
@@ -328,9 +346,42 @@
       }
     }
 
+    async function askBlock() {
+      if (!confirm('Bloquer cet utilisateur ?\nIl sera retiré de tes amis et vous ne vous verrez plus dans les recherches.')) return;
+      const btn = document.getElementById('block-btn');
+      btn.disabled = true; btn.textContent = 'Blocage…';
+      try {
+        await apiFetch('/api/blocks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: profileUid }),
+        });
+        location.href = '/profil';
+      } catch {
+        btn.disabled = false; btn.textContent = 'Bloquer';
+        alert('Erreur lors du blocage');
+      }
+    }
+
     window.authReady.then(async (currentUser) => {
-      const r = await fetch(`/api/profile-public?uid=${encodeURIComponent(profileUid)}`);
+      // Récupère le profil avec un token authentifié pour respecter la confidentialité
+      const r = await apiFetch(`/api/profile-public?uid=${encodeURIComponent(profileUid)}`);
       const profile = await r.json();
+
+      // Profil privé : on n'affiche que l'avatar et le nom
+      if (profile.private) {
+        document.getElementById('display-name').textContent = profile.displayName || 'Sans nom';
+        if (profile.photoURL) {
+          document.getElementById('avatar').innerHTML = `<img src="${escapeHtml(profile.photoURL)}" alt="">`;
+        }
+        document.getElementById('private-banner').style.display = 'block';
+        if (currentUser.uid !== profileUid) {
+          document.getElementById('friend-action').style.display = 'block';
+          document.getElementById('friend-btn').style.display = 'none';
+        }
+        return;
+      }
+
       render(profile);
 
       if (currentUser.uid === profileUid) return; // pas de bouton sur son propre profil
@@ -338,6 +389,11 @@
       const friends = await friendsRes.json();
       const isFriend = friends.some(f => f.uid === profileUid);
       setFriendButton(isFriend);
+
+      // Cache le bouton "Ajouter en ami" si la cible n'accepte pas les demandes
+      if (!isFriend && profile.friendRequests === 'nobody') {
+        document.getElementById('friend-btn').style.display = 'none';
+      }
     });
   </script>
 </body>

@@ -317,12 +317,32 @@ app.post('/api/profile', requireAuth, async (req, res) => {
 });
 
 // Profil public (sans email ni liste d'amis) — pour visualisation par d'autres
+// Respecte la confidentialité : profil "friends" n'est visible que par les amis
 app.get('/api/profile-public', async (req, res) => {
   const { uid } = req.query;
   if (!uid) return res.status(400).json({ error: 'uid requis' });
   const doc = await db.collection('profiles').doc(uid).get();
   if (!doc.exists) return res.json({});
   const d = doc.data();
+
+  // Si profil privé (visibility=friends), seuls les amis peuvent le voir
+  if (d.visibility === 'friends') {
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    let viewerUid = null;
+    if (token) {
+      try { viewerUid = (await admin.auth().verifyIdToken(token)).uid; } catch {}
+    }
+    const isFriend = viewerUid && (d.friends || []).includes(viewerUid);
+    const isSelf = viewerUid === uid;
+    if (!isFriend && !isSelf) {
+      return res.json({
+        uid, private: true,
+        displayName: d.displayName || '',
+        photoURL: d.photoURL || '',
+      });
+    }
+  }
+
   res.json({
     uid,
     displayName: d.displayName || '',
@@ -331,17 +351,35 @@ app.get('/api/profile-public', async (req, res) => {
     favoriteActors: d.favoriteActors || [],
     favoriteQuotes: d.favoriteQuotes || [],
     badges: d.badges || [],
+    friendRequests: d.friendRequests || 'everyone',
   });
 });
 
 // Recherche d'utilisateurs par nom
+// Filtre les utilisateurs bloqués (dans les deux sens) et les comptes ayant
+// désactivé les demandes d'ami quand un utilisateur connecté cherche.
 app.get('/api/recherche-utilisateurs', async (req, res) => {
   const q = (req.query.q || '').toLowerCase().trim();
   if (q.length < 2) return res.json([]);
+
+  let viewerUid = null;
+  let viewerBlocked = [];
+  const token = req.headers.authorization?.split('Bearer ')[1];
+  if (token) {
+    try {
+      viewerUid = (await admin.auth().verifyIdToken(token)).uid;
+      const v = await db.collection('profiles').doc(viewerUid).get();
+      viewerBlocked = v.exists ? (v.data().blockedUsers || []) : [];
+    } catch {}
+  }
+
   const snap = await db.collection('profiles').get();
   const results = snap.docs
     .map(doc => ({ uid: doc.id, ...doc.data() }))
+    .filter(p => p.uid !== viewerUid)
     .filter(p => (p.displayName || '').toLowerCase().includes(q))
+    .filter(p => !viewerBlocked.includes(p.uid))
+    .filter(p => !(p.blockedUsers || []).includes(viewerUid))
     .slice(0, 12)
     .map(p => ({
       uid: p.uid,
@@ -374,6 +412,19 @@ app.post('/api/amis', requireAuth, async (req, res) => {
   const { friendUid } = req.body;
   if (!friendUid) return res.status(400).json({ error: 'friendUid requis' });
   if (req.uid === friendUid) return res.status(400).json({ error: 'Pas toi-même' });
+
+  // Refuse si la cible n'accepte pas les demandes ou bloque l'utilisateur
+  const target = await db.collection('profiles').doc(friendUid).get();
+  if (target.exists) {
+    const t = target.data();
+    if (t.friendRequests === 'nobody') {
+      return res.status(403).json({ error: 'Cet utilisateur n\'accepte pas les demandes' });
+    }
+    if ((t.blockedUsers || []).includes(req.uid)) {
+      return res.status(403).json({ error: 'Ajout impossible' });
+    }
+  }
+
   await db.collection('profiles').doc(req.uid).set({
     friends: admin.firestore.FieldValue.arrayUnion(friendUid),
   }, { merge: true });
@@ -417,6 +468,105 @@ app.get('/api/badges', (req, res) => {
 
 app.get('/scan-animation', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'scan-animation.html'));
+});
+
+app.get('/reglages', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reglages.html'));
+});
+
+app.get(['/cgu', '/confidentialite'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'legal.html'));
+});
+
+// ── Réglages : confidentialité ─────────────────────────────────────────
+// visibility: 'public' | 'friends'
+// friendRequests: 'everyone' | 'nobody'
+app.patch('/api/profile/privacy', requireAuth, async (req, res) => {
+  const { visibility, friendRequests } = req.body;
+  const data = {};
+  if (visibility !== undefined) {
+    if (!['public', 'friends'].includes(visibility)) {
+      return res.status(400).json({ error: 'visibility invalide' });
+    }
+    data.visibility = visibility;
+  }
+  if (friendRequests !== undefined) {
+    if (!['everyone', 'nobody'].includes(friendRequests)) {
+      return res.status(400).json({ error: 'friendRequests invalide' });
+    }
+    data.friendRequests = friendRequests;
+  }
+  if (!Object.keys(data).length) return res.status(400).json({ error: 'rien à mettre à jour' });
+  await db.collection('profiles').doc(req.uid).set(data, { merge: true });
+  res.json({ success: true });
+});
+
+// ── Bloquer / débloquer un utilisateur ─────────────────────────────────
+app.get('/api/blocks', requireAuth, async (req, res) => {
+  const doc = await db.collection('profiles').doc(req.uid).get();
+  const blockedUids = doc.exists ? (doc.data().blockedUsers || []) : [];
+  if (!blockedUids.length) return res.json([]);
+  const blocked = await Promise.all(blockedUids.map(async (bid) => {
+    const bdoc = await db.collection('profiles').doc(bid).get();
+    if (!bdoc.exists) return { uid: bid, displayName: '(compte supprimé)', photoURL: '' };
+    const b = bdoc.data();
+    return { uid: bid, displayName: b.displayName || '', photoURL: b.photoURL || '' };
+  }));
+  res.json(blocked);
+});
+
+app.post('/api/blocks', requireAuth, async (req, res) => {
+  const { uid } = req.body;
+  if (!uid) return res.status(400).json({ error: 'uid requis' });
+  if (uid === req.uid) return res.status(400).json({ error: 'Pas toi-même' });
+  await db.collection('profiles').doc(req.uid).set({
+    blockedUsers: admin.firestore.FieldValue.arrayUnion(uid),
+    friends: admin.firestore.FieldValue.arrayRemove(uid),
+  }, { merge: true });
+  res.json({ success: true });
+});
+
+app.delete('/api/blocks/:uid', requireAuth, async (req, res) => {
+  await db.collection('profiles').doc(req.uid).set({
+    blockedUsers: admin.firestore.FieldValue.arrayRemove(req.params.uid),
+  }, { merge: true });
+  res.json({ success: true });
+});
+
+// ── Export RGPD : toutes les données de l'utilisateur ──────────────────
+app.get('/api/export-data', requireAuth, async (req, res) => {
+  const [profileDoc, collectionsSnap] = await Promise.all([
+    db.collection('profiles').doc(req.uid).get(),
+    db.collection('collections').where('uid', '==', req.uid).get(),
+  ]);
+  const profile = profileDoc.exists ? profileDoc.data() : {};
+  const collections = collectionsSnap.docs.map(d => d.data());
+  res.json({
+    exportedAt: new Date().toISOString(),
+    uid: req.uid,
+    email: req.token.email || null,
+    profile,
+    collections,
+  });
+});
+
+// ── Suppression du compte (Firestore + Firebase Auth) ──────────────────
+app.delete('/api/account', requireAuth, async (req, res) => {
+  try {
+    // 1. Supprimer les tickets de la collection
+    const colSnap = await db.collection('collections').where('uid', '==', req.uid).get();
+    const batch = db.batch();
+    colSnap.docs.forEach(d => batch.delete(d.ref));
+    // 2. Supprimer le profil
+    batch.delete(db.collection('profiles').doc(req.uid));
+    await batch.commit();
+    // 3. Supprimer l'utilisateur Firebase Auth (sinon il pourrait re-créer un profil avec le même UID)
+    await admin.auth().deleteUser(req.uid);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[delete account]', e);
+    res.status(500).json({ error: 'Suppression échouée' });
+  }
 });
 
 app.listen(PORT, () => {
