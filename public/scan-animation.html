@@ -12,7 +12,11 @@
       color: #fff;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       display: flex; align-items: center; justify-content: center;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
+    img { -webkit-user-drag: none; pointer-events: none; }
 
     #canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 
@@ -37,7 +41,12 @@
       position: relative;
       box-shadow: 0 0 40px rgba(180,0,0,0.0), 0 8px 32px rgba(0,0,0,0.7);
       transform-origin: top center;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
+    .ticket-wrap img { pointer-events: none; -webkit-user-drag: none; }
+
     /* Spider-Man : carte qui descend accrochée à la toile */
     .ticket-wrap[data-theme="spiderman"] {
       animation: webDrop 1.6s cubic-bezier(0.42, 0.05, 0.3, 1.25) both, dangle 3.5s ease-in-out infinite;
@@ -185,7 +194,7 @@
 
   <div class="scene">
     <div class="ticket-wrap" id="card">
-      <img id="poster" alt="" style="display:none">
+      <img id="poster" alt="" style="display:none" draggable="false">
       <div class="ticket-placeholder" id="placeholder">🎬</div>
       <div class="shimmer"></div>
     </div>
