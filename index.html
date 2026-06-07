@@ -637,12 +637,12 @@ function construireCalendrier() {
   const mois = ["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"];
   const moisLong = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 
-  // NB_JOURS : nombre de jours proposés à partir de demain.
-  // (6 jours pour inclure samedi 13)
+  // NB_JOURS : nombre de jours proposés à partir d'aujourd'hui (inclus).
+  // (6 jours -> de lundi 8 à samedi 13)
   const NB_JOURS = 6;
   const aujourdhui = new Date();
 
-  for (let i = 1; i <= NB_JOURS; i++) {
+  for (let i = 0; i < NB_JOURS; i++) {
     const d = new Date(aujourdhui);
     d.setDate(aujourdhui.getDate() + i);
 
