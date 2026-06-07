@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pour Clémence ✨</title>
+
+<!-- Polices élégantes (Google Fonts) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet" />
+
+<style>
+/* =====================================================================
+   PALETTE & VARIABLES
+   Modifie ces valeurs pour changer toute l'ambiance du site facilement.
+   ===================================================================== */
+:root {
+  --blanc:        #fffdfb;
+  --beige:        #f7efe7;
+  --rose-pale:    #f6dfe2;
+  --rose-doux:    #e9b7bf;
+  --rose-fonce:   #c98a93;
+  --texte:        #5a4b4b;
+  --texte-doux:   #8a7a7a;
+  --ombre:        rgba(180, 140, 140, 0.25);
+  --transition:   0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* =====================================================================
+   RESET & BASE
+   ===================================================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'Poppins', sans-serif;
+  color: var(--texte);
+  /* Dégradé doux et chaleureux en fond */
+  background: linear-gradient(135deg, var(--blanc) 0%, var(--beige) 45%, var(--rose-pale) 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =====================================================================
+   FOND ANIMÉ — particules lumineuses discrètes
+   ===================================================================== */
+#particules {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Halo lumineux subtil qui respire au centre */
+body::before {
+  content: "";
+  position: fixed;
+  top: 50%; left: 50%;
+  width: 80vmax; height: 80vmax;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255, 245, 247, 0.55) 0%, rgba(255, 245, 247, 0) 60%);
+  z-index: 0;
+  pointer-events: none;
+  animation: respire 8s ease-in-out infinite;
+}
+@keyframes respire {
+  0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.08); }
+}
+
+/* =====================================================================
+   STRUCTURE DES ÉTAPES
+   Chaque <section class="etape"> est une page. On bascule l'une vers
+   l'autre en ajoutant/retirant la classe .active (transition fondue).
+   ===================================================================== */
+.scene {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 640px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.etape {
+  display: none;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity var(--transition), transform var(--transition);
+}
+.etape.active {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* =====================================================================
+   TYPOGRAPHIE DES MESSAGES
+   ===================================================================== */
+.message {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.7rem, 5vw, 2.8rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--texte);
+  margin-bottom: 36px;
+  min-height: 1.4em;
+}
+
+/* Curseur clignotant de la machine à écrire */
+.curseur {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--rose-fonce);
+  margin-left: 3px;
+  vertical-align: text-bottom;
+  animation: clignote 0.9s steps(1) infinite;
+}
+@keyframes clignote { 50% { opacity: 0; } }
+
+.sous-message {
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+  font-weight: 300;
+  color: var(--texte-doux);
+  margin-top: 18px;
+}
+
+/* =====================================================================
+   BOUTONS
+   ===================================================================== */
+.boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 12px;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.boutons.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.btn {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  color: var(--texte);
+  background: var(--blanc);
+  border: 1.5px solid var(--rose-doux);
+  border-radius: 50px;
+  padding: 14px 34px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, color 0.3s ease;
+  box-shadow: 0 4px 14px var(--ombre);
+}
+.btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  background: var(--rose-doux);
+  color: #fff;
+  box-shadow: 0 10px 24px var(--ombre);
+}
+.btn:active { transform: translateY(-1px) scale(1.0); }
+
+/* Effet de lueur qui balaie le bouton au survol */
+.btn::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -120%;
+  width: 100%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.6), transparent);
+  transition: left 0.6s ease;
+}
+.btn:hover::after { left: 120%; }
+
+/* Bouton principal "Excellente idée" — plus mis en valeur */
+.btn-principal {
+  background: linear-gradient(135deg, var(--rose-doux), var(--rose-fonce));
+  color: #fff;
+  border: none;
+  font-size: 1.1rem;
+  padding: 16px 42px;
+  box-shadow: 0 8px 22px rgba(201, 138, 147, 0.45);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+.btn-principal:hover {
+  background: linear-gradient(135deg, var(--rose-fonce), var(--rose-doux));
+  transform: translateY(-4px) scale(1.05);
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 8px 22px rgba(201, 138, 147, 0.45); }
+  50%      { box-shadow: 0 8px 34px rgba(201, 138, 147, 0.7); }
+}
+
+/* =====================================================================
+   ÉTAPE 3 — CALENDRIER & CRÉNEAUX
+   ===================================================================== */
+.bloc-titre {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+  margin-bottom: 28px;
+  color: var(--texte);
+}
+
+.calendrier {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+  gap: 12px;
+  margin: 0 auto 28px;
+  max-width: 520px;
+}
+
+.jour {
+  background: var(--blanc);
+  border: 1.5px solid transparent;
+  border-radius: 18px;
+  padding: 14px 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px var(--ombre);
+}
+.jour:hover {
+  transform: translateY(-3px);
+  border-color: var(--rose-doux);
+}
+.jour.choisi {
+  background: linear-gradient(135deg, var(--rose-doux), var(--rose-fonce));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(201, 138, 147, 0.5);
+  transform: translateY(-3px);
+}
+.jour .nom-jour {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.75;
+}
+.jour .num-jour {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.jour .mois-jour {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+/* Conteneur des créneaux (apparaît après choix de la date) */
+.creneaux-bloc {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.6s ease, opacity 0.6s ease, margin 0.6s ease;
+}
+.creneaux-bloc.visible {
+  max-height: 400px;
+  opacity: 1;
+  margin-bottom: 12px;
+}
+.sous-titre {
+  font-size: 0.95rem;
+  font-weight: 300;
+  color: var(--texte-doux);
+  margin-bottom: 16px;
+}
+.creneaux {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 26px;
+}
+.creneau {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  background: var(--blanc);
+  border: 1.5px solid var(--rose-pale);
+  border-radius: 50px;
+  padding: 11px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px var(--ombre);
+}
+.creneau:hover {
+  transform: translateY(-2px);
+  border-color: var(--rose-doux);
+}
+.creneau.choisi {
+  background: linear-gradient(135deg, var(--rose-doux), var(--rose-fonce));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 7px 18px rgba(201, 138, 147, 0.5);
+}
+
+/* Récapitulatif date + heure choisies */
+.recap {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  color: var(--rose-fonce);
+  margin: 4px 0 24px;
+  min-height: 1.5em;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.recap.visible { opacity: 1; }
+
+/* Le bouton "Valider" reste désactivé tant que tout n'est pas choisi */
+.btn-principal:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  animation: none;
+  filter: grayscale(0.3);
+}
+
+/* =====================================================================
+   ÉTAPE 4 — CONFIRMATION
+   ===================================================================== */
+.coeur-confirm {
+  font-size: 4rem;
+  display: inline-block;
+  animation: bondit 1.6s ease-in-out infinite;
+  margin-bottom: 12px;
+}
+@keyframes bondit {
+  0%, 100% { transform: scale(1); }
+  30%      { transform: scale(1.18); }
+  45%      { transform: scale(0.95); }
+}
+
+.final-message {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.6rem, 4.5vw, 2.5rem);
+  line-height: 1.4;
+  margin-bottom: 22px;
+}
+.final-sous {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 300;
+  font-size: clamp(1rem, 2.8vw, 1.25rem);
+  color: var(--texte-doux);
+  font-style: italic;
+}
+
+/* Conteneur des confettis / cœurs qui tombent */
+#confettis {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+.coeur-tombe {
+  position: absolute;
+  top: -40px;
+  font-size: 1.2rem;
+  animation: chute linear forwards;
+}
+@keyframes chute {
+  to { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+}
+
+/* =====================================================================
+   RESPONSIVE
+   ===================================================================== */
+@media (max-width: 480px) {
+  .scene { padding: 24px 16px; }
+  .btn { padding: 13px 28px; }
+  .creneau { padding: 10px 18px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- Fond animé : particules dessinées en canvas -->
+<canvas id="particules"></canvas>
+
+<!-- Conteneur des cœurs qui tombent à l'étape finale -->
+<div id="confettis"></div>
+
+<div class="scene">
+
+  <!-- ===================== ÉTAPE 1 ===================== -->
+  <section class="etape active" id="etape1">
+    <h1 class="message" id="texte-etape1"></h1>
+    <div class="boutons" id="boutons-etape1">
+      <button class="btn" onclick="allerEtape2(true)">Oui</button>
+      <button class="btn" onclick="allerEtape2(false)">Non</button>
+    </div>
+  </section>
+
+  <!-- ===================== ÉTAPE 2 ===================== -->
+  <section class="etape" id="etape2">
+    <h1 class="message" id="texte-etape2"></h1>
+    <div class="boutons" id="boutons-etape2">
+      <button class="btn btn-principal" onclick="allerEtape3()">Excellente idée 😌</button>
+    </div>
+  </section>
+
+  <!-- ===================== ÉTAPE 3 ===================== -->
+  <section class="etape" id="etape3">
+    <h2 class="bloc-titre">Quand est-ce que tu es dispo ?</h2>
+
+    <!-- Le calendrier est généré dynamiquement en JS -->
+    <div class="calendrier" id="calendrier"></div>
+
+    <!-- Les créneaux apparaissent après le choix d'une date -->
+    <div class="creneaux-bloc" id="creneaux-bloc">
+      <p class="sous-titre">Et plutôt vers quelle heure ?</p>
+      <div class="creneaux" id="creneaux"></div>
+    </div>
+
+    <p class="recap" id="recap"></p>
+
+    <div class="boutons visible">
+      <button class="btn btn-principal" id="btn-valider" onclick="allerEtape4()" disabled>
+        Valider cette horaire
+      </button>
+    </div>
+  </section>
+
+  <!-- ===================== ÉTAPE 4 ===================== -->
+  <section class="etape" id="etape4">
+    <div class="coeur-confirm">💕</div>
+    <p class="final-message">
+      Génial ! Dans tous les cas,<br>je me serais arrangé pour être présent 😉
+    </p>
+    <p class="final-sous">
+      Merci d'avoir joué le jeu jusqu'au bout,<br>hâte de te retrouver.
+    </p>
+    <p class="recap visible" id="recap-final" style="margin-top:28px;"></p>
+  </section>
+
+</div>
+
+<script>
+/* =====================================================================
+   ÉTAT GLOBAL
+   On stocke ici les choix de Clémence pour les réafficher à la fin.
+   ===================================================================== */
+const choix = {
+  dateLabel: null,   // ex : "vendredi 12 juin"
+  heure: null        // ex : "18h30"
+};
+
+/* ---------------------------------------------------------------------
+   ENVOI DE LA CONFIRMATION PAR E-MAIL (Formspree)
+   Colle ici l'endpoint que Formspree t'a donné (https://formspree.io/f/xxxx).
+   Tant que la valeur reste "TON_ENDPOINT_ICI", aucun e-mail n'est envoyé
+   (le site fonctionne quand même normalement).
+   --------------------------------------------------------------------- */
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/xqeopvye";
+
+function envoyerConfirmation() {
+  // Si l'endpoint n'est pas configuré, on ne tente rien.
+  if (!FORMSPREE_ENDPOINT || FORMSPREE_ENDPOINT === "TON_ENDPOINT_ICI") return;
+
+  fetch(FORMSPREE_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify({
+      _subject: "💕 Clémence a choisi son horaire !",
+      date: choix.dateLabel,
+      heure: choix.heure,
+      message: `Clémence a réservé : ${choix.dateLabel} à ${choix.heure} 🎳`
+    })
+  }).catch(err => console.warn("Envoi de la confirmation impossible :", err));
+}
+
+/* =====================================================================
+   UTILITAIRE — Effet machine à écrire
+   Écrit le texte caractère par caractère, puis exécute un callback.
+   ===================================================================== */
+function machineAEcrire(element, texte, vitesse, callback) {
+  element.innerHTML = "";
+  // Curseur clignotant
+  const curseur = document.createElement("span");
+  curseur.className = "curseur";
+  element.appendChild(curseur);
+
+  let i = 0;
+  const timer = setInterval(() => {
+    if (i < texte.length) {
+      // On insère le caractère AVANT le curseur
+      curseur.insertAdjacentText("beforebegin", texte.charAt(i));
+      i++;
+    } else {
+      clearInterval(timer);
+      // On retire le curseur après une courte pause, puis callback
+      setTimeout(() => {
+        curseur.remove();
+        if (callback) callback();
+      }, 500);
+    }
+  }, vitesse);
+}
+
+/* Affiche un groupe de boutons en douceur */
+function afficherBoutons(id) {
+  document.getElementById(id).classList.add("visible");
+}
+
+/* Bascule d'une étape à l'autre avec transition fondue */
+function changerEtape(idCourant, idSuivant, apresTransition) {
+  const courant = document.getElementById(idCourant);
+  const suivant = document.getElementById(idSuivant);
+
+  courant.classList.remove("active");
+  // On attend la fin du fondu sortant avant d'afficher la suivante
+  setTimeout(() => {
+    suivant.classList.add("active");
+    if (apresTransition) apresTransition();
+  }, 600);
+}
+
+/* =====================================================================
+   ÉTAPE 1 — Message d'accueil
+   ===================================================================== */
+window.addEventListener("load", () => {
+  const texte = "Salut Clémence, ton week-end s'est bien passé ?";
+  machineAEcrire(
+    document.getElementById("texte-etape1"),
+    texte,
+    55,
+    () => afficherBoutons("boutons-etape1")
+  );
+});
+
+/* =====================================================================
+   ÉTAPE 2 — Réponse adaptée au choix Oui / Non
+   ===================================================================== */
+function allerEtape2(positif) {
+  const texte = positif
+    ? "Ok super ! Après le travail, c'est toujours une bonne idée d'aller se détendre ?"
+    : "Ah mince... j'allais justement te proposer qu'on en parle en tapant dans des quilles !";
+
+  changerEtape("etape1", "etape2", () => {
+    machineAEcrire(
+      document.getElementById("texte-etape2"),
+      texte,
+      45,
+      () => afficherBoutons("boutons-etape2")
+    );
+  });
+}
+
+/* =====================================================================
+   ÉTAPE 3 — Calendrier + créneaux
+   ===================================================================== */
+function allerEtape3() {
+  changerEtape("etape2", "etape3", construireCalendrier);
+}
+
+/* Construit dynamiquement les prochains jours disponibles */
+function construireCalendrier() {
+  const conteneur = document.getElementById("calendrier");
+  if (conteneur.children.length > 0) return; // déjà construit
+
+  const joursSemaine = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
+  const joursSemaineLong = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+  const mois = ["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"];
+  const moisLong = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+  // NB_JOURS : nombre de jours proposés à partir de demain.
+  // (6 jours pour inclure samedi 13)
+  const NB_JOURS = 6;
+  const aujourdhui = new Date();
+
+  for (let i = 1; i <= NB_JOURS; i++) {
+    const d = new Date(aujourdhui);
+    d.setDate(aujourdhui.getDate() + i);
+
+    const carte = document.createElement("div");
+    carte.className = "jour";
+    carte.innerHTML = `
+      <div class="nom-jour">${joursSemaine[d.getDay()]}</div>
+      <div class="num-jour">${d.getDate()}</div>
+      <div class="mois-jour">${mois[d.getMonth()]}</div>
+    `;
+
+    // Libellé complet mémorisé pour le récapitulatif
+    const label = `${joursSemaineLong[d.getDay()]} ${d.getDate()} ${moisLong[d.getMonth()]}`;
+
+    carte.addEventListener("click", () => {
+      // Désélectionne les autres jours
+      document.querySelectorAll(".jour").forEach(j => j.classList.remove("choisi"));
+      carte.classList.add("choisi");
+      choix.dateLabel = label;
+      // Affiche les créneaux horaires
+      document.getElementById("creneaux-bloc").classList.add("visible");
+      majRecap();
+    });
+
+    conteneur.appendChild(carte);
+  }
+
+  construireCreneaux();
+}
+
+/* Construit les créneaux horaires sélectionnables */
+function construireCreneaux() {
+  const horaires = ["19h00", "19h30", "20h00", "20h30", "21h00", "21h30", "22h00"];
+  const conteneur = document.getElementById("creneaux");
+
+  horaires.forEach(h => {
+    const c = document.createElement("div");
+    c.className = "creneau";
+    c.textContent = h;
+    c.addEventListener("click", () => {
+      document.querySelectorAll(".creneau").forEach(x => x.classList.remove("choisi"));
+      c.classList.add("choisi");
+      choix.heure = h;
+      majRecap();
+    });
+    conteneur.appendChild(c);
+  });
+}
+
+/* Met à jour le récapitulatif et active le bouton de validation */
+function majRecap() {
+  const recap = document.getElementById("recap");
+  const btn = document.getElementById("btn-valider");
+
+  if (choix.dateLabel && choix.heure) {
+    recap.textContent = `📅 ${choix.dateLabel} à ${choix.heure}`;
+    recap.classList.add("visible");
+    btn.disabled = false;
+  } else if (choix.dateLabel) {
+    recap.textContent = `📅 ${choix.dateLabel} — choisis une heure`;
+    recap.classList.add("visible");
+  }
+}
+
+/* =====================================================================
+   ÉTAPE 4 — Confirmation + animation
+   ===================================================================== */
+function allerEtape4() {
+  // Envoie l'e-mail de confirmation (si Formspree est configuré)
+  envoyerConfirmation();
+  changerEtape("etape3", "etape4", () => {
+    // Affiche le récapitulatif final
+    document.getElementById("recap-final").textContent =
+      `Rendez-vous le ${choix.dateLabel} à ${choix.heure} 🎳`;
+    lancerCoeurs();
+  });
+}
+
+/* Fait tomber une pluie de petits cœurs */
+function lancerCoeurs() {
+  const conteneur = document.getElementById("confettis");
+  const emojis = ["💕", "💗", "🤍", "✨", "🩷"];
+
+  for (let i = 0; i < 40; i++) {
+    setTimeout(() => {
+      const c = document.createElement("span");
+      c.className = "coeur-tombe";
+      c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.fontSize = (0.9 + Math.random() * 1.4) + "rem";
+      const duree = 3 + Math.random() * 3;
+      c.style.animationDuration = duree + "s";
+      conteneur.appendChild(c);
+      // Nettoyage du DOM une fois l'animation terminée
+      setTimeout(() => c.remove(), duree * 1000);
+    }, i * 120);
+  }
+}
+
+/* =====================================================================
+   FOND ANIMÉ — Particules lumineuses flottantes (canvas)
+   ===================================================================== */
+(function initParticules() {
+  const canvas = document.getElementById("particules");
+  const ctx = canvas.getContext("2d");
+  let particules = [];
+
+  function redimensionner() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  redimensionner();
+  window.addEventListener("resize", redimensionner);
+
+  // Crée un ensemble de particules douces
+  const NB = Math.min(60, Math.floor(window.innerWidth / 22));
+  for (let i = 0; i < NB; i++) {
+    particules.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: 1 + Math.random() * 2.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -0.2 - Math.random() * 0.5,
+      alpha: 0.2 + Math.random() * 0.5
+    });
+  }
+
+  function animer() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particules.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      // Réapparaît en bas quand elle sort par le haut
+      if (p.y < -10) { p.y = canvas.height + 10; p.x = Math.random() * canvas.width; }
+      if (p.x < -10) p.x = canvas.width + 10;
+      if (p.x > canvas.width + 10) p.x = -10;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(233, 183, 191, ${p.alpha})`;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "rgba(255, 220, 225, 0.8)";
+      ctx.fill();
+    });
+    requestAnimationFrame(animer);
+  }
+  animer();
+})();
+</script>
+</body>
+</html>
