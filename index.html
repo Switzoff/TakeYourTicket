@@ -374,6 +374,24 @@ body::before {
   line-height: 1.4;
   margin-bottom: 22px;
 }
+/* Petite note "Tu peux toujours le refaire..." sous la confirmation */
+.refaire {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 300;
+  font-size: clamp(0.8rem, 2.2vw, 0.95rem);
+  color: var(--texte-doux);
+  margin-top: 22px;
+  line-height: 1.5;
+}
+.refaire a {
+  color: var(--rose-fonce);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.refaire a:hover { opacity: 0.7; }
+
 .final-sous {
   font-family: 'Poppins', sans-serif;
   font-weight: 300;
@@ -473,6 +491,12 @@ body::before {
       Merci d'avoir joué le jeu jusqu'au bout,<br>hâte de te retrouver.
     </p>
     <p class="recap visible" id="recap-final" style="margin-top:28px;"></p>
+    <!-- Petite note : possibilité de recommencer pour changer l'horaire -->
+    <p class="refaire">
+      Tu peux toujours
+      <a href="#" onclick="location.reload(); return false;">le refaire</a>
+      si tu souhaites modifier l'horaire de l'invitation.
+    </p>
   </section>
 
 </div>
