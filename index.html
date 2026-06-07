@@ -331,6 +331,30 @@ body::before {
 }
 
 /* =====================================================================
+   ÉTAPE 1 — Petit cocker qui passe la tête en bas de l'écran
+   ===================================================================== */
+.cocker {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  width: min(200px, 42vw);
+  z-index: 2;
+  pointer-events: none;          /* ne gêne pas les clics sur les boutons */
+  filter: drop-shadow(0 -6px 18px rgba(180, 140, 140, 0.25));
+  /* Monte depuis le bas au chargement, puis flotte doucement */
+  animation: cocker-monte 1s cubic-bezier(0.22, 1, 0.36, 1) 1.2s both,
+             cocker-flotte 4s ease-in-out 2.4s infinite;
+}
+@keyframes cocker-monte {
+  from { transform: translate(-50%, 100%); opacity: 0; }
+  to   { transform: translate(-50%, 0);    opacity: 1; }
+}
+@keyframes cocker-flotte {
+  0%, 100% { transform: translate(-50%, 0); }
+  50%      { transform: translate(-50%, -10px); }
+}
+
+/* =====================================================================
    ÉTAPE 4 — CONFIRMATION
    ===================================================================== */
 .coeur-confirm {
@@ -405,6 +429,8 @@ body::before {
       <button class="btn" onclick="allerEtape2(true)">Oui</button>
       <button class="btn" onclick="allerEtape2(false)">Non</button>
     </div>
+    <!-- Petit cocker qui passe la tête en bas (uniquement sur l'étape 1) -->
+    <img class="cocker" src="cocker.png" alt="Un petit cocker qui passe la tête" />
   </section>
 
   <!-- ===================== ÉTAPE 2 ===================== -->
