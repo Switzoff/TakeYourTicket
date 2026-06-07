@@ -335,12 +335,14 @@ body::before {
    ===================================================================== */
 .cocker {
   position: fixed;
-  bottom: -110px;                /* bien descendu : le bas carré de la photo sort de l'écran */
+  bottom: -30px;                 /* le museau dépasse en bas de l'écran */
   left: 50%;
-  width: min(200px, 42vw);
+  width: min(210px, 46vw);
   z-index: 2;
   pointer-events: none;          /* ne gêne pas les clics sur les boutons */
-  filter: drop-shadow(0 -6px 18px rgba(180, 140, 140, 0.25));
+  /* Fondu progressif du bas de l'image : supprime le bord plat carré de la photo */
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
   /* Monte simplement depuis le bas au chargement, sans flotter ensuite */
   animation: cocker-monte 1s cubic-bezier(0.22, 1, 0.36, 1) 1.2s both;
 }
