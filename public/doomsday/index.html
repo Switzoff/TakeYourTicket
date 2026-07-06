@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opération Doomsday — Concept d'activation retail</title>
+<meta name="robots" content="noindex">
+<style>
+  :root {
+    --noir: #07090711;
+    --bg: #080a08;
+    --bg-2: #0d120d;
+    --plomb: #1a231b;
+    --vitrail-sombre: #16241a;
+    --vitrail-mid: #2e4a2e;
+    --vitrail-clair: #93b874;
+    --vitrail-pale: #dcebc4;
+    --glow: #b7d96a;
+    --glow-soft: rgba(183, 217, 106, 0.55);
+    --texte: #cfd8c8;
+    --texte-faible: #7d8a76;
+    --rouge-doom: #6b3a2e;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Courier New", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(62, 92, 58, 0.25), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 110%, rgba(46, 74, 46, 0.18), transparent 60%),
+      linear-gradient(160deg, #0a0d0a 0%, #080a08 40%, #0b100b 100%);
+    background-attachment: fixed;
+    color: var(--texte);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+
+  main { max-width: 460px; margin: 0 auto; padding: 0 20px 60px; }
+
+  /* ---------- HERO ---------- */
+  .hero { text-align: center; padding: 48px 0 40px; }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    color: var(--texte-faible);
+    border: 1px solid rgba(125, 138, 118, 0.35);
+    border-radius: 3px;
+    padding: 5px 12px;
+    margin-bottom: 30px;
+  }
+
+  .mark { width: 132px; height: auto; margin: 0 auto 26px; display: block; }
+
+  h1 {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(30px, 9vw, 40px);
+    letter-spacing: 8px;
+    color: var(--vitrail-pale);
+    text-shadow: 0 0 18px var(--glow-soft), 0 0 45px rgba(183, 217, 106, 0.2);
+    line-height: 1.25;
+    margin-bottom: 14px;
+  }
+  h1 .thin { font-weight: 400; font-size: 0.55em; letter-spacing: 10px; display: block; color: var(--glow); }
+
+  .date-line {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--glow);
+    text-shadow: 0 0 10px var(--glow-soft);
+    margin-bottom: 22px;
+  }
+
+  .sub { font-size: 15px; color: var(--texte); max-width: 320px; margin: 0 auto 34px; }
+  .sub strong { color: var(--vitrail-pale); }
+
+  .cta {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #0a0d0a;
+    background: linear-gradient(160deg, var(--vitrail-pale), var(--vitrail-clair));
+    padding: 15px 34px;
+    border-radius: 4px;
+    text-decoration: none;
+    box-shadow: 0 0 22px rgba(183, 217, 106, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .cta:active { transform: scale(0.97); }
+
+  .skip {
+    display: block;
+    margin-top: 18px;
+    font-size: 12.5px;
+    color: var(--texte-faible);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section { padding: 42px 0; border-top: 1px solid rgba(46, 74, 46, 0.4); }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 19px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--vitrail-pale);
+    text-align: center;
+    margin-bottom: 10px;
+    text-shadow: 0 0 14px rgba(183, 217, 106, 0.3);
+  }
+  .section-intro { text-align: center; font-size: 14px; color: var(--texte-faible); max-width: 320px; margin: 0 auto 28px; }
+  .section-intro strong { color: var(--glow); }
+
+  /* ---------- JEU ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .tuile {
+    aspect-ratio: 3 / 4;
+    border: 1px solid var(--plomb);
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, rgba(147, 184, 116, 0.16) 0%, transparent 45%),
+      linear-gradient(315deg, rgba(147, 184, 116, 0.10) 0%, transparent 40%),
+      linear-gradient(160deg, var(--vitrail-sombre), #0e1810 55%, var(--vitrail-mid));
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.7);
+    transition: box-shadow 0.25s ease, background 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* lignes de plomb du vitrail */
+  .tuile::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom right, transparent calc(50% - 1px), var(--plomb) 50%, transparent calc(50% + 1px)),
+      linear-gradient(to top right, transparent calc(30% - 1px), var(--plomb) 30%, transparent calc(30% + 1px));
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .tuile .icone {
+    width: 46%;
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  .tuile.peek .icone, .tuile.revelee .icone { opacity: 1; transform: scale(1); }
+
+  .tuile.peek, .tuile.relique {
+    background: linear-gradient(160deg, rgba(220, 235, 196, 0.28), rgba(147, 184, 116, 0.16) 60%, var(--vitrail-mid));
+    box-shadow: inset 0 0 22px rgba(183, 217, 106, 0.25), 0 0 16px rgba(183, 217, 106, 0.3);
+  }
+
+  .tuile.doom {
+    background: linear-gradient(160deg, #241512, #170d0b 60%, var(--rouge-doom));
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+  }
+
+  .tuile.inerte { cursor: default; }
+
+  .statut {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--texte-faible);
+    margin-bottom: 22px;
+  }
+  .statut b { color: var(--glow); font-weight: 700; }
+
+  .btn-jeu {
+    display: block;
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--vitrail-pale);
+    background: transparent;
+    border: 1px solid var(--vitrail-clair);
+    border-radius: 4px;
+    padding: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .btn-jeu:active { background: rgba(147, 184, 116, 0.12); }
+
+  .resultat { display: none; text-align: center; margin-top: 6px; }
+  .resultat.visible { display: block; animation: apparait 0.5s ease; }
+
+  @keyframes apparait {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .carte-gain {
+    border: 1px solid var(--vitrail-clair);
+    border-radius: 6px;
+    padding: 24px 20px;
+    margin-bottom: 16px;
+    background: linear-gradient(170deg, rgba(147, 184, 116, 0.10), rgba(13, 18, 13, 0.6));
+    box-shadow: 0 0 26px rgba(183, 217, 106, 0.18);
+  }
+  .carte-gain .titre-gain {
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--glow);
+    text-shadow: 0 0 12px var(--glow-soft);
+    margin-bottom: 10px;
+  }
+  .carte-gain .code {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--vitrail-pale);
+    border: 1px dashed rgba(220, 235, 196, 0.4);
+    border-radius: 4px;
+    padding: 10px 0;
+    margin: 12px 0;
+  }
+  .carte-gain small { font-size: 11px; color: var(--texte-faible); }
+
+  .carte-perdu { color: var(--texte-faible); font-size: 14px; margin-bottom: 16px; }
+  .carte-perdu .titre-perdu {
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #b08b7a;
+    margin-bottom: 8px;
+  }
+
+  /* ---------- PITCH ---------- */
+  #pitch .accroche {
+    font-size: 16px;
+    color: var(--texte);
+    text-align: center;
+    max-width: 340px;
+    margin: 0 auto 30px;
+  }
+  #pitch .accroche strong { color: var(--vitrail-pale); }
+
+  .carte {
+    border: 1px solid rgba(46, 74, 46, 0.6);
+    border-radius: 6px;
+    background: rgba(13, 18, 13, 0.55);
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .carte h3 {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--glow);
+    margin-bottom: 8px;
+  }
+  .carte p, .carte li { font-size: 14px; color: var(--texte); }
+  .carte ul { list-style: none; }
+  .carte li { padding-left: 16px; position: relative; margin-bottom: 5px; }
+  .carte li::before { content: "▸"; position: absolute; left: 0; color: var(--vitrail-clair); }
+  .carte small { display: block; margin-top: 8px; font-size: 11px; color: var(--texte-faible); }
+
+  .signature {
+    text-align: center;
+    margin-top: 34px;
+    padding: 26px 20px;
+    border: 1px solid var(--vitrail-clair);
+    border-radius: 6px;
+    background: linear-gradient(170deg, rgba(147, 184, 116, 0.08), transparent);
+  }
+  .signature .nom {
+    font-family: var(--mono);
+    font-size: 17px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--vitrail-pale);
+    text-shadow: 0 0 12px rgba(183, 217, 106, 0.3);
+  }
+  .signature .role { font-size: 13px; color: var(--texte-faible); margin: 8px 0 18px; }
+  .signature .contact {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    color: #0a0d0a;
+    background: linear-gradient(160deg, var(--vitrail-pale), var(--vitrail-clair));
+    padding: 12px 26px;
+    border-radius: 4px;
+    text-decoration: none;
+    box-shadow: 0 0 18px rgba(183, 217, 106, 0.3);
+  }
+
+  footer {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--texte-faible);
+    padding: 30px 20px 0;
+    border-top: 1px solid rgba(46, 74, 46, 0.4);
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <span class="tag">Concept d'activation retail — non officiel</span>
+
+    <!-- Logo Avengers (le « A » cerclé de l'affiche), habillé dans la DA verte du film -->
+    <svg class="mark" viewBox="-10 -10 210.764 242.769" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="verreA" x1="0" y1="0" x2="0.35" y2="1">
+          <stop offset="0%" stop-color="#dcebc4"/>
+          <stop offset="55%" stop-color="#93b874"/>
+          <stop offset="100%" stop-color="#3e5c3a"/>
+        </linearGradient>
+        <filter id="lueur" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="4" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g fill="url(#verreA)" filter="url(#lueur)">
+        <path d="m 91.256,43.595 c -42.332,2.172 -75.995,37.577 -75.995,80.931 0,14.627 3.832,28.349 10.535,40.195 l -8.118,15.765 C 6.548,164.704 0,145.388 0,124.526 0,71.248 42.704,28.053 95.382,28.053 c 0.753,0 1.504,0.009 2.252,0.026 L 111.412,0 h 29.434 v 39.696 c 29.733,16.337 49.918,48.2 49.918,84.829 0,53.279 -42.704,96.473 -95.382,96.473 -16.079,0 -31.229,-4.024 -44.519,-11.132 l 6.712,-13.875 c 11.262,6.107 24.134,9.571 37.807,9.571 44.249,0 80.121,-36.282 80.121,-81.037 0,-27.971 -14.013,-52.633 -35.325,-67.197 v 76.695 L 113.281,108.581 V 50.453 l -33.218,78.891 h 33.218 V 116.68 l 31.141,29.274 -32.179,24.705 V 157.58 H 68.437 L 39.582,222.769 3.874,222.07 91.256,43.595 z"/>
+        <polygon points="112.21,179.637 140.125,155.723 140.125,179.637"/>
+      </g>
+    </svg>
+
+    <h1><span class="thin">Opération</span>DOOMSDAY</h1>
+    <p class="date-line">EN MAGASIN&nbsp;&nbsp;25.11.26 — 24.12.26</p>
+    <p class="sub"><strong>King Jouet</strong> célèbre l'événement Marvel de Noël 2026 — le film sort le <strong>18 décembre</strong>. Brisez les vitraux, retrouvez les reliques, remportez votre récompense.</p>
+    <a class="cta" href="#jeu">Jouer — 20 secondes</a>
+    <a class="skip" href="#pitch" id="lien-recruteur">Recruteur pressé ? Accès direct →</a>
+  </header>
+
+  <!-- ============ JEU ============ -->
+  <section id="jeu">
+    <h2>Brisez les vitraux</h2>
+    <p class="section-intro">Les reliques des Avengers s'illuminent <strong>2 secondes</strong>. Mémorisez leur position, puis retrouvez les <strong>3</strong> en <strong>4 essais</strong> — avant que Doom ne referme la verrière.</p>
+
+    <div class="grid" id="grille" aria-label="Grille de jeu"></div>
+
+    <div class="statut">
+      <span>Reliques&nbsp;: <b id="trouvees">0</b>/3</span>
+      <span>Essais&nbsp;: <b id="essais">4</b></span>
+    </div>
+
+    <button class="btn-jeu" id="btn-demarrer">Illuminer les vitraux</button>
+
+    <div class="resultat" id="res-gagne">
+      <div class="carte-gain">
+        <div class="titre-gain">Reliques réunies</div>
+        <p>−20&nbsp;% sur l'univers Marvel<br>chez King Jouet</p>
+        <div class="code">DOOM-NOEL</div>
+        <small>Dotation fictive — démonstration de mécanique instant-win.</small>
+      </div>
+      <button class="btn-jeu" id="btn-suite">Découvrir qui a conçu cette opération ↓</button>
+    </div>
+
+    <div class="resultat" id="res-perdu">
+      <div class="carte-perdu">
+        <div class="titre-perdu">Doom l'emporte…</div>
+        <p>La verrière s'est refermée. Retentez votre chance.</p>
+      </div>
+      <button class="btn-jeu" id="btn-retenter">Retenter</button>
+    </div>
+  </section>
+
+  <!-- ============ PITCH ============ -->
+  <section id="pitch">
+    <h2>Ce que vous venez de vivre<br>est ma candidature</h2>
+    <p class="accroche">Cette activation n'existe pas (encore). Je l'ai <strong>imaginée, designée et codée</strong> pour postuler à l'alternance <strong>Assistant(e) Marketing Produits Dérivés</strong> chez Disney Consumer Products — plutôt que de décrire ce que je ferais, je préférais vous le faire vivre.</p>
+
+    <div class="carte">
+      <h3>Insight</h3>
+      <p>Décembre 2026 : la sortie du prochain Avengers (18/12) tombe en plein pic d'achats de Noël. Le rayon Marvel devient une destination — l'enjeu est de convertir ce trafic en panier et en données opt-in pour l'enseigne.</p>
+    </div>
+
+    <div class="carte">
+      <h3>Mécanique</h3>
+      <ul>
+        <li>QR code sur PLV totem et stop-rayon, dans la DA du film</li>
+        <li>Jeu mobile de 20 secondes, sans téléchargement</li>
+        <li>Instant-win : remise immédiate ou dotation collector</li>
+        <li>Collecte opt-in CRM en fin de parcours</li>
+      </ul>
+    </div>
+
+    <div class="carte">
+      <h3>Déploiement</h3>
+      <ul>
+        <li>Du 25 novembre au 24 décembre 2026</li>
+        <li>Top 120 magasins King Jouet + relais site enseigne</li>
+        <li>Amplification CRM et réseaux sociaux de l'enseigne</li>
+      </ul>
+    </div>
+
+    <div class="carte">
+      <h3>KPI cibles</h3>
+      <ul>
+        <li>Taux de scan : 10&nbsp;% du trafic rayon</li>
+        <li>Complétion du jeu : 70&nbsp;%</li>
+        <li>Opt-in CRM : 25&nbsp;% des joueurs</li>
+        <li>Panier moyen rayon Marvel : +15&nbsp;%</li>
+      </ul>
+      <small>Objectifs fictifs, posés pour illustrer le pilotage de l'opération.</small>
+    </div>
+
+    <div class="signature">
+      <div class="nom">Evan Feghrour</div>
+      <div class="role">Candidat alternance — Assistant Marketing Produits Dérivés<br>Master Marketing · Septembre 2026 · 12 mois</div>
+      <a class="contact" href="mailto:evanfeghrour@gmail.com?subject=Candidature%20alternance%20Marketing%20Produits%20D%C3%A9riv%C3%A9s">Me contacter</a>
+    </div>
+  </section>
+
+  <footer>
+    Concept fictif et non officiel, réalisé à titre de candidature.<br>
+    Non affilié à The Walt Disney Company, Marvel ou King Jouet.<br>
+    Le logo Avengers est une marque de Marvel Characters, Inc.,<br>
+    reproduit uniquement à titre d'illustration dans ce dossier de candidature.
+  </footer>
+
+</main>
+
+<script>
+(function () {
+  var ICONES = {
+    // Reliques des Avengers, en formes stylisées
+    eclair: '<svg class="icone" viewBox="0 0 40 52" xmlns="http://www.w3.org/2000/svg"><polygon points="24,2 8,30 18,30 14,50 34,20 22,20" fill="#dcebc4" stroke="#93b874" stroke-width="1.5"/></svg>',
+    bouclier: '<svg class="icone" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><circle cx="22" cy="22" r="19" fill="none" stroke="#dcebc4" stroke-width="3"/><circle cx="22" cy="22" r="11" fill="none" stroke="#93b874" stroke-width="3"/><circle cx="22" cy="22" r="4" fill="#dcebc4"/></svg>',
+    etoile: '<svg class="icone" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><polygon points="22,3 27,16 41,16 30,25 34,39 22,30 10,39 14,25 3,16 17,16" fill="#dcebc4" stroke="#93b874" stroke-width="1.5"/></svg>',
+    // Masque de Doom
+    doom: '<svg class="icone" viewBox="0 0 40 48" xmlns="http://www.w3.org/2000/svg"><path d="M20 3 C9 3 5 11 5 20 L5 34 C5 42 12 45 20 45 C28 45 35 42 35 34 L35 20 C35 11 31 3 20 3 Z" fill="#241512" stroke="#6b3a2e" stroke-width="2"/><rect x="10" y="19" width="8" height="4" rx="2" fill="#b08b7a"/><rect x="22" y="19" width="8" height="4" rx="2" fill="#b08b7a"/><line x1="14" y1="32" x2="26" y2="32" stroke="#6b3a2e" stroke-width="2"/></svg>'
+  };
+  var RELIQUES = ['eclair', 'bouclier', 'etoile'];
+
+  var grille = document.getElementById('grille');
+  var elTrouvees = document.getElementById('trouvees');
+  var elEssais = document.getElementById('essais');
+  var btnDemarrer = document.getElementById('btn-demarrer');
+  var resGagne = document.getElementById('res-gagne');
+  var resPerdu = document.getElementById('res-perdu');
+  var pitch = document.getElementById('pitch');
+
+  var tuiles = [], symboles = [];
+  var essais = 4, trouvees = 0, phase = 'attente'; // attente | memo | jeu | fini
+
+  function melanger(t) {
+    for (var i = t.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = t[i]; t[i] = t[j]; t[j] = tmp;
+    }
+    return t;
+  }
+
+  function construireGrille() {
+    grille.innerHTML = '';
+    tuiles = [];
+    symboles = melanger(RELIQUES.concat(['doom', 'doom', 'doom', 'doom', 'doom', 'doom']));
+    for (var i = 0; i < 9; i++) {
+      var t = document.createElement('div');
+      t.className = 'tuile';
+      t.setAttribute('role', 'button');
+      t.setAttribute('aria-label', 'Vitrail ' + (i + 1));
+      t.innerHTML = ICONES[symboles[i]];
+      t.addEventListener('click', auClic(i));
+      grille.appendChild(t);
+      tuiles.push(t);
+    }
+  }
+
+  function majStatut() {
+    elTrouvees.textContent = trouvees;
+    elEssais.textContent = essais;
+  }
+
+  function reinitialiser() {
+    essais = 4; trouvees = 0; phase = 'attente';
+    resGagne.classList.remove('visible');
+    resPerdu.classList.remove('visible');
+    btnDemarrer.style.display = 'block';
+    btnDemarrer.textContent = 'Illuminer les vitraux';
+    construireGrille();
+    majStatut();
+  }
+
+  function demarrer() {
+    if (phase !== 'attente') return;
+    phase = 'memo';
+    btnDemarrer.textContent = 'Mémorisez…';
+    tuiles.forEach(function (t, i) {
+      if (symboles[i] !== 'doom') t.classList.add('peek');
+    });
+    setTimeout(function () {
+      tuiles.forEach(function (t) { t.classList.remove('peek'); });
+      phase = 'jeu';
+      btnDemarrer.style.display = 'none';
+    }, 2000);
+  }
+
+  function auClic(i) {
+    return function () {
+      if (phase !== 'jeu') return;
+      var t = tuiles[i];
+      if (t.classList.contains('revelee')) return;
+      t.classList.add('revelee', 'inerte');
+      essais--;
+      if (symboles[i] === 'doom') {
+        t.classList.add('doom');
+      } else {
+        t.classList.add('relique');
+        trouvees++;
+      }
+      majStatut();
+      if (trouvees === 3) {
+        finir(true);
+      } else if (essais === 0) {
+        finir(false);
+      }
+    };
+  }
+
+  function finir(gagne) {
+    phase = 'fini';
+    tuiles.forEach(function (t) { t.classList.add('inerte'); });
+    var res = gagne ? resGagne : resPerdu;
+    setTimeout(function () {
+      res.classList.add('visible');
+      res.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 450);
+  }
+
+  btnDemarrer.addEventListener('click', demarrer);
+  document.getElementById('btn-retenter').addEventListener('click', reinitialiser);
+  document.getElementById('btn-suite').addEventListener('click', function () {
+    pitch.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  reinitialiser();
+})();
+</script>
+</body>
+</html>
