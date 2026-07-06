@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opération Brand New Day — Concept d'activation retail</title>
+<meta name="robots" content="noindex">
+<style>
+  :root {
+    --bg: #060a16;
+    --bg-2: #0b1226;
+    --acier: #222c52;
+    --bleu-sombre: #101a3a;
+    --bleu: #2c49a8;
+    --bleu-clair: #7e9bff;
+    --rouge-sombre: #8f1218;
+    --rouge: #e62429;
+    --rouge-vif: #ff4a52;
+    --rouge-pale: #ffd6d8;
+    --glow-soft: rgba(255, 74, 82, 0.5);
+    --texte: #d6dbea;
+    --texte-faible: #7e87a6;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Courier New", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(230, 36, 41, 0.18), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 110%, rgba(44, 73, 168, 0.24), transparent 60%),
+      linear-gradient(160deg, #081020 0%, #060a16 40%, #0a0f22 100%);
+    background-attachment: fixed;
+    color: var(--texte);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+
+  main { max-width: 460px; margin: 0 auto; padding: 0 20px 60px; }
+
+  /* ---------- HERO ---------- */
+  .hero { text-align: center; padding: 48px 0 40px; }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    color: var(--texte-faible);
+    border: 1px solid rgba(126, 135, 166, 0.35);
+    border-radius: 3px;
+    padding: 5px 12px;
+    margin-bottom: 30px;
+  }
+
+  .mark { width: min(320px, 82vw); height: auto; margin: 0 auto 22px; display: block; }
+
+  h1 {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(20px, 6vw, 30px);
+    letter-spacing: 6px;
+    white-space: nowrap;
+    color: var(--rouge-pale);
+    text-shadow: 0 0 18px var(--glow-soft), 0 0 45px rgba(230, 36, 41, 0.25);
+    line-height: 1.25;
+    margin-bottom: 14px;
+  }
+  h1 .thin { font-weight: 400; font-size: 0.55em; letter-spacing: 10px; display: block; color: var(--rouge-vif); }
+
+  .date-line {
+    font-family: var(--mono);
+    font-size: clamp(11px, 3.2vw, 13px);
+    letter-spacing: 2.5px;
+    white-space: nowrap;
+    color: var(--bleu-clair);
+    text-shadow: 0 0 10px rgba(126, 155, 255, 0.5);
+    margin-bottom: 22px;
+  }
+
+  .sub { font-size: 15px; color: var(--texte); max-width: 320px; margin: 0 auto 34px; }
+  .sub strong { color: var(--rouge-pale); }
+
+  .cta {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(160deg, var(--rouge-vif), var(--rouge));
+    padding: 15px 34px;
+    border-radius: 4px;
+    text-decoration: none;
+    box-shadow: 0 0 22px rgba(230, 36, 41, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .cta:active { transform: scale(0.97); }
+
+  .skip {
+    display: block;
+    margin-top: 18px;
+    font-size: 12.5px;
+    color: var(--texte-faible);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section { padding: 42px 0; border-top: 1px solid rgba(44, 73, 168, 0.35); }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 19px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--rouge-pale);
+    text-align: center;
+    margin-bottom: 10px;
+    text-shadow: 0 0 14px rgba(230, 36, 41, 0.3);
+  }
+  .section-intro { text-align: center; font-size: 14px; color: var(--texte-faible); max-width: 320px; margin: 0 auto 28px; }
+  .section-intro strong { color: var(--rouge-vif); }
+
+  /* ---------- JEU ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .tuile {
+    aspect-ratio: 1 / 1.05;
+    border: 1px solid var(--acier);
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, rgba(126, 155, 255, 0.10) 0%, transparent 45%),
+      linear-gradient(170deg, #0e1630, #0a1024 55%, var(--bleu-sombre));
+    box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.7);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* croisillons de la fenêtre */
+  .tuile::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to right, transparent calc(50% - 1px), var(--acier) 50%, transparent calc(50% + 1px)),
+      linear-gradient(to bottom, transparent calc(38% - 1px), var(--acier) 38%, transparent calc(38% + 1px));
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .tuile .icone {
+    width: 60%;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.14s ease, transform 0.14s ease;
+    position: relative;
+    z-index: 1;
+  }
+  .tuile.alerte .icone, .tuile.capturee .icone { opacity: 1; transform: scale(1); }
+
+  .tuile.alerte {
+    border-color: var(--rouge);
+    box-shadow: inset 0 0 20px rgba(230, 36, 41, 0.3), 0 0 14px rgba(230, 36, 41, 0.35);
+  }
+
+  .tuile.capturee {
+    border-color: var(--bleu-clair);
+    box-shadow: inset 0 0 20px rgba(126, 155, 255, 0.3), 0 0 14px rgba(126, 155, 255, 0.35);
+  }
+
+  .tuile.inerte { cursor: default; }
+
+  .statut {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--texte-faible);
+    margin-bottom: 22px;
+  }
+  .statut b { color: var(--rouge-vif); font-weight: 700; }
+
+  .btn-jeu {
+    display: block;
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #dfe6ff;
+    background: transparent;
+    border: 1px solid var(--bleu-clair);
+    border-radius: 4px;
+    padding: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .btn-jeu:active { background: rgba(126, 155, 255, 0.12); }
+
+  .resultat { display: none; text-align: center; margin-top: 6px; }
+  .resultat.visible { display: block; animation: apparait 0.5s ease; }
+
+  @keyframes apparait {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .carte-gain {
+    border: 1px solid var(--rouge);
+    border-radius: 6px;
+    padding: 24px 20px;
+    margin-bottom: 16px;
+    background: linear-gradient(170deg, rgba(230, 36, 41, 0.10), rgba(11, 18, 38, 0.6));
+    box-shadow: 0 0 26px rgba(230, 36, 41, 0.18);
+  }
+  .carte-gain .titre-gain {
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--rouge-vif);
+    text-shadow: 0 0 12px var(--glow-soft);
+    margin-bottom: 10px;
+  }
+  .carte-gain .code {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: var(--rouge-pale);
+    border: 1px dashed rgba(255, 214, 216, 0.4);
+    border-radius: 4px;
+    padding: 10px 0;
+    margin: 12px 0;
+  }
+  .carte-gain small { font-size: 11px; color: var(--texte-faible); }
+
+  .carte-perdu { color: var(--texte-faible); font-size: 14px; margin-bottom: 16px; }
+  .carte-perdu .titre-perdu {
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #c98a8e;
+    margin-bottom: 8px;
+  }
+
+  /* ---------- PITCH ---------- */
+  #pitch .accroche {
+    font-size: 16px;
+    color: var(--texte);
+    text-align: center;
+    max-width: 340px;
+    margin: 0 auto 30px;
+  }
+  #pitch .accroche strong { color: var(--rouge-pale); }
+
+  .carte {
+    border: 1px solid rgba(44, 73, 168, 0.55);
+    border-radius: 6px;
+    background: rgba(11, 18, 38, 0.55);
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .carte h3 {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--rouge-vif);
+    margin-bottom: 8px;
+  }
+  .carte p, .carte li { font-size: 14px; color: var(--texte); }
+  .carte ul { list-style: none; }
+  .carte li { padding-left: 16px; position: relative; margin-bottom: 5px; }
+  .carte li::before { content: "▸"; position: absolute; left: 0; color: var(--bleu-clair); }
+  .carte small { display: block; margin-top: 8px; font-size: 11px; color: var(--texte-faible); }
+
+  .signature {
+    text-align: center;
+    margin-top: 34px;
+    padding: 26px 20px;
+    border: 1px solid var(--rouge);
+    border-radius: 6px;
+    background: linear-gradient(170deg, rgba(230, 36, 41, 0.08), transparent);
+  }
+  .signature .nom {
+    font-family: var(--mono);
+    font-size: 17px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--rouge-pale);
+    text-shadow: 0 0 12px rgba(230, 36, 41, 0.3);
+  }
+  .signature .role { font-size: 13px; color: var(--texte-faible); margin: 8px 0 18px; }
+  .signature .contact {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    color: #fff;
+    background: linear-gradient(160deg, var(--rouge-vif), var(--rouge));
+    padding: 12px 26px;
+    border-radius: 4px;
+    text-decoration: none;
+    box-shadow: 0 0 18px rgba(230, 36, 41, 0.35);
+  }
+
+  footer {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--texte-faible);
+    padding: 30px 20px 0;
+    border-top: 1px solid rgba(44, 73, 168, 0.35);
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <span class="tag">Concept d'activation retail — non officiel</span>
+
+    <!-- Wordmark Spider-Man officiel (vectoriel Wikimedia Commons), habillé dans la DA rouge du film -->
+    <svg class="mark" viewBox="76 24 650 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Spider-Man">
+      <defs>
+        <linearGradient id="rougeSM" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff5a60"/>
+          <stop offset="55%" stop-color="#e62429"/>
+          <stop offset="100%" stop-color="#8f1218"/>
+        </linearGradient>
+        <filter id="lueur" x="-10%" y="-40%" width="120%" height="180%">
+          <feGaussianBlur stdDeviation="3" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <path fill="url(#rougeSM)" filter="url(#lueur)" d="M 131.83734,66.260134 C 122.8724,68.139902 114.24509,69.07978 105.95539,69.079769 C 97.6656,69.07978 89.278776,68.139902 80.79489,66.260134 L 82.315021,59.175747 C 91.278406,61.296743 99.736566,62.35723 107.68953,62.357212 C 113.18461,62.35723 119.28131,61.778448 125.97965,60.620865 L 127.35416,54.041717 L 83.398308,54.041717 L 87.446845,34.955129 C 96.460233,33.076891 105.11181,32.137749 113.4016,32.137701 C 121.6913,32.137749 130.05312,33.076891 138.48709,34.955129 L 136.96916,42.041723 C 128.05276,39.969324 119.61813,38.933106 111.66526,38.933065 C 106.17156,38.933106 100.07486,39.486883 93.375138,40.594399 L 92.000621,46.95733 L 135.95647,46.95733 L 131.83734,66.260134 z M 156.8125,46.811715 L 171.70715,46.811715 C 180.28514,46.811748 187.63501,46.595533 193.75678,46.163067 L 194.91287,40.667206 C 188.50282,39.511152 182.35758,38.933106 176.47714,38.933065 C 170.98344,38.933106 164.88674,39.486883 158.18702,40.594399 L 156.8125,46.811715 z M 139.38946,46.811715 L 149.72812,46.811715 L 152.25873,34.955129 C 161.27211,33.076891 169.92369,32.137749 178.21349,32.137701 C 186.50319,32.137749 194.86501,33.076891 203.29897,34.955129 L 201.78104,42.041723 L 201.70823,42.041723 L 199.53945,52.234768 C 189.36989,53.343822 179.61002,53.898335 170.25982,53.898308 L 155.36738,53.898308 L 152.11532,69.006961 L 145.02872,69.006961 L 148.283,53.898308 L 137.94434,53.898308 L 139.38946,46.811715 z M 219.68947,32.137701 L 226.77386,32.137701 L 218.893,69.006961 L 211.80862,69.006961 L 219.68947,32.137701 z M 282.57306,60.548057 L 286.76721,40.667206 C 280.35716,39.511152 274.18765,38.933106 268.25867,38.933065 C 267.05399,38.933106 262.88485,38.836765 255.75123,38.644041 L 250.40319,38.498426 L 245.34197,62.13879 L 238.25758,62.13879 L 264.28294,62.211597 C 269.77802,62.211616 275.87472,61.657103 282.57306,60.548057 L 282.57306,60.548057 z M 288.43075,66.187326 C 279.46582,68.067095 270.83851,69.006972 262.5488,69.006961 L 236.81026,69.006961 L 244.69111,32.137701 L 269.99502,32.137701 C 278.28472,32.137749 286.64654,33.076891 295.0805,34.955129 L 288.43075,66.187326 z M 301.32651,46.811715 L 314.84664,46.811715 L 316.79699,37.631355 L 316.8698,37.631355 L 317.80968,33.366603 C 325.23159,32.547383 334.43768,32.137749 345.42798,32.137701 C 355.93425,32.137749 364.60936,32.570916 371.45334,33.437204 L 369.93541,40.594399 C 360.63363,39.341269 351.18706,38.714684 341.59566,38.714642 C 335.04,38.714684 328.9911,39.027976 323.44895,39.65452 L 321.93102,46.811715 L 356.99333,46.811715 L 355.54822,53.898308 L 320.4859,53.898308 L 318.89517,61.126104 C 324.34172,61.752708 330.31781,62.066001 336.82346,62.065983 C 346.41487,62.066001 355.95778,61.439416 365.45224,60.186226 L 363.93431,67.345627 C 356.70498,68.453195 347.90926,69.006972 337.54712,69.006961 C 326.70245,69.006972 317.71331,68.453195 310.57968,67.345627 L 311.66517,62.357212 L 311.59236,62.357212 L 313.39931,53.898308 L 299.88139,53.898308 L 301.32651,46.811715 z M 429.29997,52.018552 C 431.3238,52.933453 432.84173,53.824792 433.85374,54.692572 L 430.81789,69.006961 L 423.7313,69.006961 L 426.1185,57.946845 C 420.76894,55.440528 414.35821,54.13882 406.8863,54.041717 L 390.18691,53.825501 L 386.93484,69.006961 L 379.84825,69.006961 L 387.07825,34.955129 C 396.09164,33.076891 404.74322,32.137749 413.03301,32.137701 C 421.32271,32.137749 429.68453,33.076891 438.11849,34.955129 L 436.60057,42.041723 L 436.52776,42.041723 L 434.5774,51.440505 L 429.29997,52.018552 z M 391.70484,46.741114 L 411.80411,46.811715 C 415.94894,46.811748 421.58747,46.354312 428.71971,45.439405 L 429.7324,40.667206 C 423.32234,39.511152 417.1771,38.933106 411.29666,38.933065 C 405.80297,38.933106 399.70627,39.486883 393.00655,40.594399 L 391.70484,46.741114 z M 459.1127,46.595499 L 497.06746,46.595499 L 494.53684,52.089153 L 456.58209,52.089153 L 459.1127,46.595499 z M 545.64991,28.883428 L 552.7365,28.883428 L 552.01284,32.208302 C 559.0979,32.449571 566.23082,33.365179 573.41162,34.955129 L 566.18161,69.152576 L 559.09723,69.152576 L 565.09833,40.667206 C 560.13412,39.752373 555.29059,39.19786 550.56772,39.003666 L 544.92845,65.825495 L 537.84186,65.825495 L 543.48113,39.003666 C 538.85524,39.149322 533.79476,39.679566 528.29967,40.594399 L 522.22797,69.152576 L 515.14137,69.152576 L 522.37137,34.955129 C 530.13159,33.316641 537.65061,32.401032 544.92845,32.208302 L 545.64991,28.883428 z M 597.89257,40.594399 L 596.52026,46.811715 L 633.38952,46.811715 L 634.69123,40.667206 C 628.28117,39.511152 622.1124,38.933106 616.1849,38.933065 C 610.73827,38.933106 604.64083,39.486883 597.89257,40.594399 L 597.89257,40.594399 z M 635.77673,69.006961 L 628.69013,69.006961 L 631.8716,54.041717 L 595.00234,54.041717 L 591.82087,69.006961 L 584.73648,69.006961 L 591.96428,34.955129 C 600.97766,33.076891 609.62924,32.137749 617.91904,32.137701 C 626.20874,32.137749 634.57129,33.076891 643.00673,34.955129 L 635.77673,69.006961 z M 669.50422,34.955129 C 672.01054,34.425666 674.49261,33.96823 676.95044,33.582819 C 677.04748,33.582866 677.09602,33.630668 677.09605,33.726228 C 677.09602,33.918956 677.03572,34.220482 676.91514,34.630805 C 676.7945,35.04122 676.73419,35.342745 676.73422,35.535383 C 676.73419,35.631033 676.75846,35.678836 676.80703,35.678791 C 677.14383,34.956646 677.55346,34.23372 678.03593,33.510011 C 684.5415,32.595185 690.34918,32.137749 695.45898,32.137701 C 703.74868,32.137749 712.1105,33.076891 720.54446,34.955129 L 713.31446,69.152576 L 706.23007,69.152576 L 712.23117,40.667206 C 705.82111,39.511152 699.65161,38.933106 693.72263,38.933065 C 688.22894,38.933106 682.13224,39.486883 675.43251,40.594399 L 669.36081,69.152576 L 662.27422,69.152576 L 669.50422,34.955129 z"/>
+    </svg>
+
+    <h1><span class="thin">Opération</span>BRAND NEW DAY</h1>
+    <p class="date-line">EN MAGASIN&nbsp;&nbsp;12.08.26 — 13.09.26</p>
+    <p class="sub"><strong>Kiabi</strong> habille la rentrée 2026 aux couleurs de Spider-Man — le film sort le <strong>31 juillet</strong>. Lancez vos toiles, capturez les drones, remportez votre récompense.</p>
+    <a class="cta" href="#jeu">Jouer — 20 secondes</a>
+    <a class="skip" href="#pitch" id="lien-recruteur">Recruteur pressé ? Accès direct →</a>
+  </header>
+
+  <!-- ============ JEU ============ -->
+  <section id="jeu">
+    <h2>Lancez vos toiles</h2>
+    <p class="section-intro">Des drones espions surgissent aux fenêtres de la façade. Touchez-les pour les piéger dans votre toile : <strong>8 captures</strong> en <strong>20 secondes</strong> — de plus en plus vite.</p>
+
+    <div class="grid" id="grille" aria-label="Façade de jeu"></div>
+
+    <div class="statut">
+      <span>Captures&nbsp;: <b id="captures">0</b>/8</span>
+      <span>Temps&nbsp;: <b id="temps">20</b>&nbsp;s</span>
+    </div>
+
+    <button class="btn-jeu" id="btn-demarrer">Activer le Spider-sense</button>
+
+    <div class="resultat" id="res-gagne">
+      <div class="carte-gain">
+        <div class="titre-gain">Quartier sécurisé</div>
+        <p>−20&nbsp;% sur l'univers Spider-Man<br>chez Kiabi</p>
+        <div class="code">WEB-RENTREE</div>
+        <small>Dotation fictive — démonstration de mécanique instant-win.</small>
+      </div>
+      <button class="btn-jeu" id="btn-suite">Découvrir qui a conçu cette opération ↓</button>
+    </div>
+
+    <div class="resultat" id="res-perdu">
+      <div class="carte-perdu">
+        <div class="titre-perdu">Les drones s'échappent…</div>
+        <p>Le temps est écoulé. Reprenez votre souffle et retentez votre chance.</p>
+      </div>
+      <button class="btn-jeu" id="btn-retenter">Retenter</button>
+    </div>
+  </section>
+
+  <!-- ============ PITCH ============ -->
+  <section id="pitch">
+    <h2>Ce que vous venez de vivre<br>est ma candidature</h2>
+    <p class="accroche">Cette activation n'existe pas (encore). Je l'ai <strong>imaginée, designée et codée</strong> pour postuler à l'alternance <strong>Assistant(e) Marketing Produits Dérivés</strong> chez Disney Consumer Products — plutôt que de décrire ce que je ferais, je préférais vous le faire vivre.</p>
+
+    <div class="carte">
+      <h3>Insight</h3>
+      <p>31 juillet 2026 : Spider-Man revient au cinéma, trois semaines avant la rentrée des classes. Quand les familles préparent cartables et tenues, le héros préféré des 6-12 ans est dans toutes les têtes — l'enjeu est de faire du rayon licence Kiabi une destination rentrée, et de convertir le buzz ciné en panier textile et en données opt-in.</p>
+    </div>
+
+    <div class="carte">
+      <h3>Mécanique</h3>
+      <ul>
+        <li>QR code sur vitrophanie, portant licence et miroirs de cabine, dans la DA du film</li>
+        <li>Jeu de réflexes mobile de 20 secondes, sans téléchargement</li>
+        <li>Instant-win : remise immédiate sur l'univers Spider-Man</li>
+        <li>Collecte opt-in CRM en fin de parcours</li>
+      </ul>
+    </div>
+
+    <div class="carte">
+      <h3>Déploiement</h3>
+      <ul>
+        <li>Du 12 août au 13 septembre 2026</li>
+        <li>Top 150 magasins Kiabi + relais kiabi.com et appli</li>
+        <li>Amplification CRM et réseaux sociaux de l'enseigne</li>
+      </ul>
+    </div>
+
+    <div class="carte">
+      <h3>KPI cibles</h3>
+      <ul>
+        <li>Taux de scan : 8&nbsp;% du trafic rayon enfant</li>
+        <li>Complétion du jeu : 70&nbsp;%</li>
+        <li>Opt-in CRM : 25&nbsp;% des joueurs</li>
+        <li>Ventes licence Spider-Man : +18&nbsp;% vs rentrée 2025</li>
+      </ul>
+      <small>Objectifs fictifs, posés pour illustrer le pilotage de l'opération.</small>
+    </div>
+
+    <div class="signature">
+      <div class="nom">Evan Feghrour</div>
+      <div class="role">Candidat alternance — Assistant Marketing Produits Dérivés<br>Master Marketing · Septembre 2026 · 12 mois</div>
+      <a class="contact" href="mailto:evanfeghrour@gmail.com?subject=Candidature%20alternance%20Marketing%20Produits%20D%C3%A9riv%C3%A9s">Me contacter</a>
+    </div>
+  </section>
+
+  <footer>
+    Concept fictif et non officiel, réalisé à titre de candidature.<br>
+    Non affilié à The Walt Disney Company, Marvel, Sony Pictures ou Kiabi.<br>
+    Le logo Spider-Man est une marque de Marvel Characters, Inc.,<br>
+    reproduit uniquement à titre d'illustration dans ce dossier de candidature.
+  </footer>
+
+</main>
+
+<script>
+(function () {
+  var ICONES = {
+    // Drone espion
+    drone: '<svg class="icone" viewBox="0 0 48 40" xmlns="http://www.w3.org/2000/svg"><line x1="10" y1="12" x2="20" y2="19" stroke="#8e97b8" stroke-width="2"/><line x1="38" y1="12" x2="28" y2="19" stroke="#8e97b8" stroke-width="2"/><line x1="10" y1="30" x2="20" y2="24" stroke="#8e97b8" stroke-width="2"/><line x1="38" y1="30" x2="28" y2="24" stroke="#8e97b8" stroke-width="2"/><ellipse cx="10" cy="11" rx="8" ry="2.6" fill="none" stroke="#aeb6d4" stroke-width="1.6"/><ellipse cx="38" cy="11" rx="8" ry="2.6" fill="none" stroke="#aeb6d4" stroke-width="1.6"/><ellipse cx="10" cy="31" rx="8" ry="2.6" fill="none" stroke="#aeb6d4" stroke-width="1.6"/><ellipse cx="38" cy="31" rx="8" ry="2.6" fill="none" stroke="#aeb6d4" stroke-width="1.6"/><rect x="17" y="16" width="14" height="11" rx="3.5" fill="#232c4e" stroke="#8e97b8" stroke-width="1.6"/><circle cx="24" cy="21.5" r="2.6" fill="#ff4a52"/></svg>',
+    // Toile lancée
+    toile: '<svg class="icone" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><g stroke="#eef1fb" stroke-width="1.6" fill="none" stroke-linecap="round"><line x1="24" y1="24" x2="45" y2="24"/><line x1="24" y1="24" x2="38.85" y2="38.85"/><line x1="24" y1="24" x2="24" y2="45"/><line x1="24" y1="24" x2="9.15" y2="38.85"/><line x1="24" y1="24" x2="3" y2="24"/><line x1="24" y1="24" x2="9.15" y2="9.15"/><line x1="24" y1="24" x2="24" y2="3"/><line x1="24" y1="24" x2="38.85" y2="9.15"/><polygon points="31,24 28.95,28.95 24,31 19.05,28.95 17,24 19.05,19.05 24,17 28.95,19.05"/><polygon points="37,24 33.19,33.19 24,37 14.81,33.19 11,24 14.81,14.81 24,11 33.19,14.81"/><polygon points="43,24 37.43,37.43 24,43 10.57,37.43 5,24 10.57,10.57 24,5 37.43,10.57"/></g></svg>'
+  };
+
+  var NB_FENETRES = 12;
+  var OBJECTIF = 8;
+  var DUREE_S = 20;
+
+  var grille = document.getElementById('grille');
+  var elCaptures = document.getElementById('captures');
+  var elTemps = document.getElementById('temps');
+  var btnDemarrer = document.getElementById('btn-demarrer');
+  var resGagne = document.getElementById('res-gagne');
+  var resPerdu = document.getElementById('res-perdu');
+  var pitch = document.getElementById('pitch');
+
+  var tuiles = [];
+  var captures = 0, temps = DUREE_S, phase = 'attente'; // attente | jeu | fini
+  var cible = -1, armee = false, visibleMs = 950;
+  var timerTic = null, timerDrone = null, timerNettoyage = null;
+
+  function construireGrille() {
+    grille.innerHTML = '';
+    tuiles = [];
+    for (var i = 0; i < NB_FENETRES; i++) {
+      var t = document.createElement('div');
+      t.className = 'tuile';
+      t.setAttribute('role', 'button');
+      t.setAttribute('aria-label', 'Fenêtre ' + (i + 1));
+      t.addEventListener('click', auClic(i));
+      grille.appendChild(t);
+      tuiles.push(t);
+    }
+  }
+
+  function majStatut() {
+    elCaptures.textContent = captures;
+    elTemps.textContent = temps;
+  }
+
+  function stopTimers() {
+    clearInterval(timerTic);
+    clearTimeout(timerDrone);
+    clearTimeout(timerNettoyage);
+  }
+
+  function reinitialiser() {
+    stopTimers();
+    captures = 0; temps = DUREE_S; phase = 'attente';
+    cible = -1; armee = false; visibleMs = 950;
+    resGagne.classList.remove('visible');
+    resPerdu.classList.remove('visible');
+    btnDemarrer.style.display = 'block';
+    construireGrille();
+    majStatut();
+  }
+
+  function demarrer() {
+    if (phase !== 'attente') return;
+    phase = 'jeu';
+    btnDemarrer.style.display = 'none';
+    timerTic = setInterval(function () {
+      temps--;
+      majStatut();
+      if (temps <= 0) finir(false);
+    }, 1000);
+    apparaitre();
+  }
+
+  function apparaitre() {
+    if (phase !== 'jeu') return;
+    var i;
+    do { i = Math.floor(Math.random() * NB_FENETRES); } while (i === cible);
+    cible = i;
+    armee = true;
+    var t = tuiles[i];
+    t.innerHTML = ICONES.drone;
+    t.classList.add('alerte');
+    timerDrone = setTimeout(function () { echapper(i); }, visibleMs);
+    visibleMs = Math.max(620, visibleMs - 22);
+  }
+
+  function echapper(i) {
+    armee = false;
+    tuiles[i].classList.remove('alerte');
+    tuiles[i].innerHTML = '';
+    timerDrone = setTimeout(apparaitre, 160);
+  }
+
+  function auClic(i) {
+    return function () {
+      if (phase !== 'jeu' || !armee || i !== cible) return;
+      armee = false;
+      clearTimeout(timerDrone);
+      var t = tuiles[i];
+      t.classList.remove('alerte');
+      t.classList.add('capturee');
+      t.innerHTML = ICONES.toile;
+      captures++;
+      majStatut();
+      timerNettoyage = setTimeout(function () {
+        t.classList.remove('capturee');
+        t.innerHTML = '';
+      }, 380);
+      if (captures >= OBJECTIF) {
+        finir(true);
+      } else {
+        timerDrone = setTimeout(apparaitre, 260);
+      }
+    };
+  }
+
+  function finir(gagne) {
+    if (phase !== 'jeu') return;
+    phase = 'fini';
+    stopTimers();
+    tuiles.forEach(function (t) { t.classList.add('inerte'); });
+    var res = gagne ? resGagne : resPerdu;
+    setTimeout(function () {
+      res.classList.add('visible');
+      res.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 450);
+  }
+
+  btnDemarrer.addEventListener('click', demarrer);
+  document.getElementById('btn-retenter').addEventListener('click', reinitialiser);
+  document.getElementById('btn-suite').addEventListener('click', function () {
+    pitch.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  reinitialiser();
+})();
+</script>
+</body>
+</html>
